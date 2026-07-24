@@ -92,6 +92,14 @@ def create_app(test_config=None):
     def initialize_database():
         schema = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
         database().executescript(schema)
+        admin_columns = {
+            row["name"]
+            for row in database().execute("PRAGMA table_info(admins)").fetchall()
+        }
+        if "auth_version" not in admin_columns:
+            database().execute(
+                "ALTER TABLE admins ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 0"
+            )
         database().commit()
 
     def audit(action, target_type=None, target_id=None, details=None):
@@ -232,7 +240,17 @@ def create_app(test_config=None):
     def login_required(view):
         @wraps(view)
         def wrapped(*args, **kwargs):
-            if not session.get("admin_id"):
+            admin_id = session.get("admin_id")
+            if not admin_id:
+                return redirect(url_for("login", next=request.path))
+            admin = database().execute(
+                "SELECT auth_version FROM admins WHERE id = ?", (admin_id,)
+            ).fetchone()
+            if (
+                not admin
+                or admin["auth_version"] != session.get("admin_auth_version", 0)
+            ):
+                session.clear()
                 return redirect(url_for("login", next=request.path))
             return view(*args, **kwargs)
 
@@ -295,6 +313,7 @@ def create_app(test_config=None):
                 session.permanent = True
                 session["admin_id"] = admin["id"]
                 session["admin_username"] = admin["username"]
+                session["admin_auth_version"] = admin["auth_version"]
                 session["csrf_token"] = secrets.token_urlsafe(32)
                 return redirect(url_for("dashboard"))
             flash("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", "error")
@@ -306,6 +325,47 @@ def create_app(test_config=None):
         require_csrf()
         session.clear()
         return redirect(url_for("login"))
+
+    @app.route("/admin/change-password", methods=["GET", "POST"])
+    @login_required
+    def change_password():
+        if request.method == "POST":
+            require_csrf()
+            current_password = request.form.get("current_password", "")
+            new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
+            admin = database().execute(
+                "SELECT * FROM admins WHERE id = ?", (session["admin_id"],)
+            ).fetchone()
+
+            if not check_password_hash(admin["password_hash"], current_password):
+                flash("รหัสผ่านปัจจุบันไม่ถูกต้อง", "error")
+                return render_template("change_password.html")
+            if len(new_password) < 12:
+                flash("รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร", "error")
+                return render_template("change_password.html")
+            if new_password != confirm_password:
+                flash("รหัสผ่านใหม่และคำยืนยันไม่ตรงกัน", "error")
+                return render_template("change_password.html")
+            if check_password_hash(admin["password_hash"], new_password):
+                flash("รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน", "error")
+                return render_template("change_password.html")
+
+            database().execute(
+                """
+                UPDATE admins
+                SET password_hash = ?, auth_version = auth_version + 1
+                WHERE id = ?
+                """,
+                (generate_password_hash(new_password), admin["id"]),
+            )
+            audit("admin.password_change", "admin", admin["id"])
+            database().commit()
+            session.clear()
+            flash("เปลี่ยนรหัสผ่านแล้ว กรุณาเข้าสู่ระบบอีกครั้ง", "success")
+            return redirect(url_for("login"))
+
+        return render_template("change_password.html")
 
     @app.get("/admin")
     @login_required

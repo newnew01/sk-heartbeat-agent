@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from heartbeat_app import create_app, format_bangkok_time
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 class HeartbeatAppTest(unittest.TestCase):
@@ -23,6 +24,22 @@ class HeartbeatAppTest(unittest.TestCase):
         runner = self.app.test_cli_runner()
         result = runner.invoke(args=["init-db"])
         self.assertEqual(result.exit_code, 0, result.output)
+        import sqlite3
+
+        conn = sqlite3.connect(self.database)
+        conn.execute(
+            """
+            INSERT INTO admins(username,password_hash,created_at)
+            VALUES(?,?,?)
+            """,
+            (
+                "admin",
+                generate_password_hash("Current-password-2026"),
+                "2026-07-24T00:00:00+00:00",
+            ),
+        )
+        conn.commit()
+        conn.close()
 
     def tearDown(self):
         self.tempdir.cleanup()
@@ -48,12 +65,94 @@ class HeartbeatAppTest(unittest.TestCase):
             args=[
                 "create-admin",
                 "--username",
-                "admin",
+                "new-admin",
                 "--password-file",
                 password_file,
             ]
         )
         self.assertEqual(result.exit_code, 0, result.output)
+
+    def test_admin_can_change_password_and_invalidate_existing_sessions(self):
+        stale_client = self.app.test_client()
+        with stale_client.session_transaction() as stale_session:
+            stale_session["admin_id"] = 1
+            stale_session["admin_username"] = "admin"
+            stale_session["admin_auth_version"] = 0
+            stale_session["csrf_token"] = "stale-csrf"
+
+        with self.client.session_transaction() as user_session:
+            user_session["admin_id"] = 1
+            user_session["admin_username"] = "admin"
+            user_session["admin_auth_version"] = 0
+            user_session["csrf_token"] = "test-csrf"
+
+        response = self.client.post(
+            "/admin/change-password",
+            data={
+                "csrf_token": "test-csrf",
+                "current_password": "Current-password-2026",
+                "new_password": "New-secure-password-2026",
+                "confirm_password": "New-secure-password-2026",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        page = response.get_data(as_text=True)
+        self.assertIn("เปลี่ยนรหัสผ่านแล้ว", page)
+        self.assertIn("เข้าสู่ระบบผู้ดูแล", page)
+
+        import sqlite3
+
+        conn = sqlite3.connect(self.database)
+        password_hash, auth_version = conn.execute(
+            "SELECT password_hash, auth_version FROM admins WHERE id = 1"
+        ).fetchone()
+        log_count = conn.execute(
+            """
+            SELECT COUNT(*) FROM audit_logs
+            WHERE action = 'admin.password_change' AND target_id = 1
+            """
+        ).fetchone()[0]
+        conn.close()
+        self.assertTrue(
+            check_password_hash(password_hash, "New-secure-password-2026")
+        )
+        self.assertFalse(check_password_hash(password_hash, "Current-password-2026"))
+        self.assertEqual(auth_version, 1)
+        self.assertEqual(log_count, 1)
+
+        stale_response = stale_client.get("/admin")
+        self.assertEqual(stale_response.status_code, 302)
+        self.assertIn("/login", stale_response.headers["Location"])
+
+    def test_change_password_rejects_wrong_current_password(self):
+        with self.client.session_transaction() as user_session:
+            user_session["admin_id"] = 1
+            user_session["admin_username"] = "admin"
+            user_session["admin_auth_version"] = 0
+            user_session["csrf_token"] = "test-csrf"
+
+        response = self.client.post(
+            "/admin/change-password",
+            data={
+                "csrf_token": "test-csrf",
+                "current_password": "wrong-password",
+                "new_password": "New-secure-password-2026",
+                "confirm_password": "New-secure-password-2026",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("รหัสผ่านปัจจุบันไม่ถูกต้อง", response.get_data(as_text=True))
+
+        import sqlite3
+
+        conn = sqlite3.connect(self.database)
+        password_hash, auth_version = conn.execute(
+            "SELECT password_hash, auth_version FROM admins WHERE id = 1"
+        ).fetchone()
+        conn.close()
+        self.assertTrue(check_password_hash(password_hash, "Current-password-2026"))
+        self.assertEqual(auth_version, 0)
 
     def test_heartbeat_requires_token(self):
         response = self.client.post("/api/v1/heartbeat")
