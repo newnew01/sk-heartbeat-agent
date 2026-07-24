@@ -4,7 +4,9 @@ param(
     [String]$DeviceId,
 
     [ValidatePattern('^https://')]
-    [String]$ApiUrl = 'https://heartbeat.184184184.xyz/api/v1/heartbeat'
+    [String]$ApiUrl = 'https://heartbeat.184184184.xyz/api/v1/heartbeat',
+
+    [String]$DeviceKey
 )
 
 Set-StrictMode -Version 2.0
@@ -48,8 +50,15 @@ foreach ($fileName in $requiredFiles) {
         -Destination (Join-Path $installDirectory $fileName) -Force
 }
 
-& (Join-Path $installDirectory 'Configure-Agent-Win7.ps1') `
-    -DeviceId $DeviceId -ApiUrl $ApiUrl -NoRestart
+$configureScript = Join-Path $installDirectory 'Configure-Agent-Win7.ps1'
+if ([String]::IsNullOrEmpty($DeviceKey)) {
+    & $configureScript -DeviceId $DeviceId -ApiUrl $ApiUrl -NoRestart
+}
+else {
+    & $configureScript -DeviceId $DeviceId -ApiUrl $ApiUrl `
+        -DeviceKey $DeviceKey -NoRestart
+    $DeviceKey = $null
+}
 
 $powershellPath = Join-Path $env:SystemRoot `
     'System32\WindowsPowerShell\v1.0\powershell.exe'

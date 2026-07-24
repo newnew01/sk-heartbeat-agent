@@ -136,8 +136,10 @@ ipset list branch_sql_allow_v4
 - Source: `client/legacy-win7`
 - Tests: `client/Test-Win7-Agent.ps1`
 - Build: `client/Build-Win7-Release.ps1`
-- Release tag: `win7-v1.0.0`
-- Release SHA-256: `DD00676DD10742E0856CB2BD5692E0B6C99C9C68CBE986050517A65DD184D07E`
+- Latest release tag: `win7-v1.0.1`
+- Release SHA-256: `4D6497F2FAA32C39B227AFDB5F496F65EA5181D61DC885B28709A9BBF06472DB`
+- `win7-v1.0.1` เพิ่ม optional `-DeviceKey` สำหรับติดตั้งบรรทัดเดียว
+  แต่ plaintext Key จะอยู่ใน command history/process command line
 - รองรับ Windows 7 SP1 และ Windows Server 2008 R2 SP1
 - ใช้ PowerShell 2-compatible script และ Scheduled Task `BranchHeartbeatLegacy`
 - Scheduled Task รันทุก 1 นาทีด้วยบัญชี `SYSTEM`

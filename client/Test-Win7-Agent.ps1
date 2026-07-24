@@ -43,6 +43,20 @@ foreach ($fileName in $runtimeScripts) {
 }
 Write-Host 'PASS PowerShell 2 compatibility scan'
 
+$installSource = [IO.File]::ReadAllText(
+    (Join-Path $legacyDirectory 'Install-Agent-Win7.ps1')
+)
+$configureSource = [IO.File]::ReadAllText(
+    (Join-Path $legacyDirectory 'Configure-Agent-Win7.ps1')
+)
+if (
+    $installSource -notmatch '\[String\]\$DeviceKey' -or
+    $configureSource -notmatch '\[String\]\$DeviceKey'
+) {
+    throw 'Inline Device Key parameter is missing from install/configure scripts.'
+}
+Write-Host 'PASS optional inline Device Key support'
+
 $testDirectory = Join-Path $env:TEMP (
     'branch-heartbeat-win7-test-' + [Guid]::NewGuid().ToString('N')
 )

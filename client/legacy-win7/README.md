@@ -32,6 +32,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\heartbeat\Install-Age
 
 วาง Device Key เมื่อระบบถาม
 
+ติดตั้งแบบบรรทัดเดียวโดยใส่ Device ID และ Device Key:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\heartbeat\Install-Agent-Win7.ps1 -DeviceId "DEVICE_ID_FROM_ADMIN" -DeviceKey "DEVICE_KEY_FROM_ADMIN"
+```
+
+คำสั่งแบบ inline สะดวกสำหรับติดตั้งอัตโนมัติ แต่ Device Key จะอยู่ใน command
+history และอาจมองเห็นได้จาก process command line ให้ใช้เฉพาะบนเครื่องที่ควบคุมได้
+และล้างประวัติคำสั่งหลังติดตั้ง หากต้องการความปลอดภัยสูงกว่าให้ใช้โหมดถาม Key
+แบบเดิม
+
 ## ตรวจสถานะ
 
 ```powershell

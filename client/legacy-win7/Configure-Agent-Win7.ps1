@@ -6,6 +6,8 @@ param(
     [ValidatePattern('^https://')]
     [String]$ApiUrl = 'https://heartbeat.184184184.xyz/api/v1/heartbeat',
 
+    [String]$DeviceKey,
+
     [Switch]$NoRestart
 )
 
@@ -19,12 +21,22 @@ if (-not (Test-LegacyAdministrator)) {
     throw 'Run this script from PowerShell as Administrator.'
 }
 
-$secureKey = Read-Host 'Paste Device Key' -AsSecureString
+$secureKey = $null
 $bstr = [IntPtr]::Zero
 $plainKey = $null
 try {
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
-    $plainKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    if ([String]::IsNullOrEmpty($DeviceKey)) {
+        $secureKey = Read-Host 'Paste Device Key' -AsSecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
+        $plainKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    }
+    else {
+        Write-Warning (
+            'Device Key supplied on the command line may remain in shell history ' +
+            'and may be visible to other administrators.'
+        )
+        $plainKey = $DeviceKey
+    }
     Set-LegacyConfiguration $ApiUrl $DeviceId $plainKey
 
     $dataDirectory = Get-LegacyDataDirectory
@@ -41,6 +53,7 @@ finally {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
     }
     $plainKey = $null
+    $DeviceKey = $null
     if ($null -ne $secureKey) {
         $secureKey.Dispose()
     }

@@ -16,8 +16,8 @@ Agent `v1.0.0` ด้านบนใช้ .NET 8 และไม่รองร
 ให้ใช้แพ็กเกจ PowerShell Scheduled Task แยก:
 
 - [คู่มือ Windows 7 Legacy Agent](legacy-win7/README.md)
-- [GitHub Release win7-v1.0.0](https://github.com/newnew01/sk-heartbeat-agent/releases/tag/win7-v1.0.0)
-- SHA-256: `DD00676DD10742E0856CB2BD5692E0B6C99C9C68CBE986050517A65DD184D07E`
+- [GitHub Release win7-v1.0.1](https://github.com/newnew01/sk-heartbeat-agent/releases/tag/win7-v1.0.1)
+- SHA-256: `4D6497F2FAA32C39B227AFDB5F496F65EA5181D61DC885B28709A9BBF06472DB`
 
 Legacy Agent ส่ง heartbeat ทุก 1 นาทีด้วยบัญชี SYSTEM, ใช้ TLS 1.2 และเข้ารหัส
 Device Key ด้วย Windows DPAPI โดยไม่ต้องเปลี่ยน Heartbeat API ฝั่ง VPS
