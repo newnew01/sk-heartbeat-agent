@@ -2,7 +2,8 @@
 
 ระบบอนุญาต Public IPv4 ของสาขาเข้า MSSQL ผ่าน heartbeat lease พร้อมหน้า Admin สำหรับจัดการสาขาและ Device Key
 
-Windows Agent และสคริปต์ติดตั้งอยู่ใน [`client/`](client/README.md)
+Windows Agent รุ่นปัจจุบันและรุ่น Legacy สำหรับ Windows 7 SP1
+อยู่ใน [`client/`](client/README.md)
 
 เอกสารส่งต่องานและสถานะ production ล่าสุดอยู่ใน [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
 

@@ -131,6 +131,23 @@ ipset list branch_sql_allow_v4
 - Agent ไม่เปิด inbound port
 - Binary ยังไม่ได้ code-sign จึงอาจมี Windows SmartScreen warning
 
+### Windows 7 Legacy Agent
+
+- Source: `client/legacy-win7`
+- Tests: `client/Test-Win7-Agent.ps1`
+- Build: `client/Build-Win7-Release.ps1`
+- Release tag: `win7-v1.0.0`
+- Release SHA-256: `DD00676DD10742E0856CB2BD5692E0B6C99C9C68CBE986050517A65DD184D07E`
+- รองรับ Windows 7 SP1 และ Windows Server 2008 R2 SP1
+- ใช้ PowerShell 2-compatible script และ Scheduled Task `BranchHeartbeatLegacy`
+- Scheduled Task รันทุก 1 นาทีด้วยบัญชี `SYSTEM`
+- บังคับ TLS 1.2 โดยไม่ปิด certificate validation
+- Device Key เข้ารหัสด้วย DPAPI `LocalMachine`
+- Config/status: `%ProgramData%\BranchHeartbeatLegacy`
+- Production API smoke test ผ่านแล้ว และลบ branch/device/audit ทดสอบแล้ว
+- ยังไม่ได้ทดสอบบนเครื่อง Windows 7 จริง; ผ่าน static PowerShell 2 compatibility scan,
+  DPAPI round-trip และ production API smoke test บน Windows รุ่นปัจจุบัน
+
 ติดตั้ง:
 
 ```powershell

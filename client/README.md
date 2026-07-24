@@ -10,6 +10,18 @@ Windows Service ที่ต่ออายุ Public IPv4 ของสาขา
 
 แพ็กเกจเป็น self-contained สำหรับ Windows x64 จึงไม่ต้องติดตั้ง .NET เพิ่ม หาก Windows แสดงคำเตือนเพราะไฟล์ยังไม่ได้ code-sign ให้ตรวจสอบ SHA-256 ก่อนติดตั้ง
 
+## Windows 7 SP1
+
+Agent `v1.0.0` ด้านบนใช้ .NET 8 และไม่รองรับ Windows 7 สำหรับเครื่อง Legacy
+ให้ใช้แพ็กเกจ PowerShell Scheduled Task แยก:
+
+- [คู่มือ Windows 7 Legacy Agent](legacy-win7/README.md)
+- [GitHub Release win7-v1.0.0](https://github.com/newnew01/sk-heartbeat-agent/releases/tag/win7-v1.0.0)
+- SHA-256: `DD00676DD10742E0856CB2BD5692E0B6C99C9C68CBE986050517A65DD184D07E`
+
+Legacy Agent ส่ง heartbeat ทุก 1 นาทีด้วยบัญชี SYSTEM, ใช้ TLS 1.2 และเข้ารหัส
+Device Key ด้วย Windows DPAPI โดยไม่ต้องเปลี่ยน Heartbeat API ฝั่ง VPS
+
 ## พฤติกรรม
 
 - ส่ง heartbeat ทันทีเมื่อ service เริ่ม
