@@ -47,6 +47,8 @@ import os
 import sqlite3
 
 conn = sqlite3.connect(os.environ["DATABASE"])
+conn.execute("PRAGMA foreign_keys = ON")
+conn.execute("DELETE FROM devices WHERE device_uid = ?", (os.environ["DEVICE_UID"],))
 conn.execute("DELETE FROM audit_logs WHERE target_type = ? AND target_id = ?", ("device", int(os.environ["DEVICE_ID"])))
 conn.execute("DELETE FROM branches WHERE code = ?", (os.environ["DEVICE_UID"],))
 conn.commit()
