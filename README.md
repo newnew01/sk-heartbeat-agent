@@ -2,6 +2,8 @@
 
 ระบบอนุญาต Public IPv4 ของสาขาเข้า MSSQL ผ่าน heartbeat lease พร้อมหน้า Admin สำหรับจัดการสาขาและ Device Key
 
+Windows Agent และสคริปต์ติดตั้งอยู่ใน [`client/`](client/README.md)
+
 ## คุณสมบัติ
 
 - Admin login และ CSRF protection

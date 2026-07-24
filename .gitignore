@@ -7,6 +7,10 @@ __pycache__/
 *.db-shm
 *.db-wal
 *.zip
+!releases/*.zip
+client/**/bin/
+client/**/obj/
+client/artifacts/
 .env
 .idea/
 .vscode/
