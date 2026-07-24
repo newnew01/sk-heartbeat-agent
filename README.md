@@ -4,6 +4,8 @@
 
 Windows Agent และสคริปต์ติดตั้งอยู่ใน [`client/`](client/README.md)
 
+เอกสารส่งต่องานและสถานะ production ล่าสุดอยู่ใน [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md)
+
 ## คุณสมบัติ
 
 - Admin login และ CSRF protection

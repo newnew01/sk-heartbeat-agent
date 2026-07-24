@@ -8,6 +8,7 @@ __pycache__/
 *.db-wal
 *.zip
 !releases/*.zip
+releases/*/
 client/**/bin/
 client/**/obj/
 client/artifacts/
