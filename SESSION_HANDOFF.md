@@ -64,6 +64,9 @@ journalctl -u branch-heartbeat.service --since "10 minutes ago" --no-pager
 
 ## สถานะล่าสุดที่ยืนยันแล้ว
 
+- หน้า Admin แสดงสถานะต่ออุปกรณ์แล้ว: จุดเขียว `ออนไลน์` เมื่อ branch/device เปิดใช้งานและ lease ยังไม่หมดอายุ; จุดเทา `ออฟไลน์` เมื่อหมดอายุ, ถูกปิด หรือยังไม่เคย heartbeat
+- ฟีเจอร์สถานะ deploy ขึ้น production แล้วจาก commit `0fc27de`
+- Backup ก่อน deploy: `/opt/branch-heartbeat-backups/0fc27de-predeploy-20260724-162637.tar.gz`
 - Windows Agent เครื่องทดสอบติดตั้งเป็น service และขึ้น `healthy`
 - Service name: `BranchHeartbeatAgent`
 - Branch code: `006`
@@ -167,6 +170,7 @@ Server เก็บเฉพาะ SHA-256 ของ Device Key และแส�
 - GitHub: `https://github.com/newnew01/sk-heartbeat-agent.git`
 - Branch: `main`
 - Agent release commit ก่อนเอกสารนี้: `c598166`
+- Admin device-status commit: `0fc27de`
 
 ทดสอบ server:
 
