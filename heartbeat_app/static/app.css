@@ -32,6 +32,9 @@ body {
   z-index: 10;
 }
 .topbar form, .row, .actions, .inline-form { align-items: center; display: flex; gap: 10px; }
+.device-name-form { align-items: center; display: flex; gap: 8px; margin-bottom: 6px; }
+.device-name-form input:not([type="hidden"]) { min-width: 130px; padding: 8px 10px; width: 160px; }
+.device-name-form button { padding: 8px 10px; white-space: nowrap; }
 .brand { color: var(--text); font-size: 18px; font-weight: 800; text-decoration: none; }
 .container { margin: 0 auto; max-width: 1180px; padding: 42px 24px 80px; }
 .hero { margin-bottom: 30px; }
@@ -92,6 +95,7 @@ button, .button {
 .device-status.offline { color: var(--muted); }
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; min-width: 720px; width: 100%; }
+.compact-table { min-width: 520px; }
 th, td { border-bottom: 1px solid var(--line); padding: 14px 10px; text-align: left; vertical-align: top; }
 th { color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
 code { color: #b9d3ff; word-break: break-all; }

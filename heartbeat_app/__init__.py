@@ -112,6 +112,57 @@ def create_app(test_config=None):
             ),
         )
 
+    def update_ipset_member(source_ip, desired_expires, comment):
+        now = utc_now()
+        furthest_expires = desired_expires
+        rows = database().execute(
+            """
+            SELECT d.expires_at
+            FROM devices d
+            JOIN branches b ON b.id = d.branch_id
+            WHERE d.observed_ip = ?
+              AND d.enabled = 1
+              AND b.enabled = 1
+              AND d.expires_at > ?
+            UNION ALL
+            SELECT expires_at
+            FROM emergency_ip_allowances
+            WHERE ip_address = ?
+              AND revoked_at IS NULL
+              AND expires_at > ?
+            """,
+            (source_ip, iso_utc(now), source_ip, iso_utc(now)),
+        ).fetchall()
+        for row in rows:
+            try:
+                candidate = datetime.fromisoformat(
+                    row["expires_at"].replace("Z", "+00:00")
+                )
+                if candidate.tzinfo is None:
+                    candidate = candidate.replace(tzinfo=timezone.utc)
+                furthest_expires = max(furthest_expires, candidate)
+            except (AttributeError, TypeError, ValueError):
+                app.logger.warning("Ignoring invalid expires_at value in database")
+
+        timeout_seconds = max(1, int((furthest_expires - now).total_seconds()))
+        subprocess.run(
+            [
+                "/usr/sbin/ipset",
+                "-exist",
+                "add",
+                app.config["IPSET_NAME"],
+                source_ip,
+                "timeout",
+                str(timeout_seconds),
+                "comment",
+                comment[:255],
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+
     def delete_ipset_member_if_unused(source_ip, excluding_device_id=None):
         if not source_ip:
             return
@@ -128,7 +179,22 @@ def create_app(test_config=None):
         if excluding_device_id is not None:
             query += " AND d.id != ?"
             params.append(excluding_device_id)
-        if database().execute(query, params).fetchone():
+        device_still_uses_ip = database().execute(query, params).fetchone()
+        allowance_still_uses_ip = database().execute(
+            """
+            SELECT 1
+            FROM emergency_ip_allowances
+            WHERE ip_address = ?
+              AND revoked_at IS NULL
+              AND expires_at > ?
+            """,
+            (source_ip, iso_utc(utc_now())),
+        ).fetchone()
+        if device_still_uses_ip or allowance_still_uses_ip:
+            try:
+                update_ipset_member(source_ip, utc_now(), "active-lease")
+            except (subprocess.SubprocessError, OSError):
+                app.logger.exception("Unable to refresh shared IP in ipset")
             return
         try:
             subprocess.run(
@@ -275,15 +341,115 @@ def create_app(test_config=None):
         logs = database().execute(
             "SELECT * FROM audit_logs ORDER BY id DESC LIMIT 25"
         ).fetchall()
+        emergency_allowances = database().execute(
+            """
+            SELECT *
+            FROM emergency_ip_allowances
+            WHERE revoked_at IS NULL AND expires_at > ?
+            ORDER BY expires_at
+            """,
+            (iso_utc(utc_now()),),
+        ).fetchall()
         online_total = sum((branch["online_count"] or 0) for branch in branches)
         return render_template(
             "dashboard.html",
             branches=branches,
             devices=devices,
             logs=logs,
+            emergency_allowances=emergency_allowances,
             online_total=online_total,
             now=iso_utc(utc_now()),
         )
+
+    @app.post("/admin/emergency-ip-allowances")
+    @login_required
+    def create_emergency_ip_allowance():
+        require_csrf()
+        supplied_ip = request.form.get("ip_address", "").strip()
+        note = request.form.get("note", "").strip()
+        try:
+            duration_minutes = int(request.form.get("duration_minutes", ""))
+            address = ipaddress.ip_address(supplied_ip)
+        except (TypeError, ValueError):
+            flash("IP หรือระยะเวลาไม่ถูกต้อง", "error")
+            return redirect(url_for("dashboard"))
+        if address.version != 4:
+            flash("รองรับเฉพาะ IPv4", "error")
+            return redirect(url_for("dashboard"))
+        if not 1 <= duration_minutes <= 1440:
+            flash("ระยะเวลาต้องอยู่ระหว่าง 1 ถึง 1,440 นาที", "error")
+            return redirect(url_for("dashboard"))
+        if len(note) > 200:
+            flash("หมายเหตุต้องไม่เกิน 200 ตัวอักษร", "error")
+            return redirect(url_for("dashboard"))
+
+        source_ip = str(address)
+        created_at = utc_now()
+        expires = created_at + timedelta(minutes=duration_minutes)
+        try:
+            update_ipset_member(source_ip, expires, "emergency-admin")
+        except (subprocess.SubprocessError, OSError):
+            app.logger.exception("Unable to add emergency IP allowance")
+            flash("เพิ่ม IP ใน firewall ไม่สำเร็จ", "error")
+            return redirect(url_for("dashboard"))
+
+        cursor = database().execute(
+            """
+            INSERT INTO emergency_ip_allowances
+                (ip_address, note, created_by, created_at, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                source_ip,
+                note,
+                session["admin_username"],
+                iso_utc(created_at),
+                iso_utc(expires),
+            ),
+        )
+        audit(
+            "emergency_ip.create",
+            "emergency_ip",
+            cursor.lastrowid,
+            {
+                "ip": source_ip,
+                "durationMinutes": duration_minutes,
+                "expiresAt": iso_utc(expires),
+                "note": note,
+            },
+        )
+        database().commit()
+        flash(f"อนุญาต {source_ip} ชั่วคราวแล้ว", "success")
+        return redirect(url_for("dashboard"))
+
+    @app.post("/admin/emergency-ip-allowances/<int:allowance_id>/revoke")
+    @login_required
+    def revoke_emergency_ip_allowance(allowance_id):
+        require_csrf()
+        allowance = database().execute(
+            """
+            SELECT * FROM emergency_ip_allowances
+            WHERE id = ? AND revoked_at IS NULL
+            """,
+            (allowance_id,),
+        ).fetchone()
+        if not allowance:
+            abort(404)
+        revoked_at = iso_utc(utc_now())
+        database().execute(
+            "UPDATE emergency_ip_allowances SET revoked_at = ? WHERE id = ?",
+            (revoked_at, allowance_id),
+        )
+        audit(
+            "emergency_ip.revoke",
+            "emergency_ip",
+            allowance_id,
+            {"ip": allowance["ip_address"]},
+        )
+        database().commit()
+        delete_ipset_member_if_unused(allowance["ip_address"])
+        flash(f"ยกเลิกสิทธิ์ {allowance['ip_address']} แล้ว", "success")
+        return redirect(url_for("dashboard"))
 
     @app.post("/admin/branches")
     @login_required
@@ -419,6 +585,44 @@ def create_app(test_config=None):
             token=token,
         )
 
+    @app.post("/admin/devices/<int:device_id>/rename")
+    @login_required
+    def rename_device(device_id):
+        require_csrf()
+        device = database().execute(
+            "SELECT * FROM devices WHERE id = ?", (device_id,)
+        ).fetchone()
+        if not device:
+            abort(404)
+
+        new_code = request.form.get("code", "").strip().lower()
+        if not DEVICE_CODE_RE.fullmatch(new_code):
+            flash("ชื่ออุปกรณ์ไม่ถูกต้อง", "error")
+            return redirect(url_for("dashboard"))
+        if new_code == device["code"]:
+            flash("ชื่ออุปกรณ์ไม่มีการเปลี่ยนแปลง", "success")
+            return redirect(url_for("dashboard"))
+
+        try:
+            database().execute(
+                "UPDATE devices SET code = ? WHERE id = ?",
+                (new_code, device_id),
+            )
+            audit(
+                "device.rename",
+                "device",
+                device_id,
+                {"oldCode": device["code"], "newCode": new_code},
+            )
+            database().commit()
+        except sqlite3.IntegrityError:
+            database().rollback()
+            flash("ชื่ออุปกรณ์นี้มีอยู่แล้วในสาขา", "error")
+            return redirect(url_for("dashboard"))
+
+        flash("แก้ไขชื่ออุปกรณ์แล้ว", "success")
+        return redirect(url_for("dashboard"))
+
     @app.post("/admin/devices/<int:device_id>/toggle")
     @login_required
     def toggle_device(device_id):
@@ -482,24 +686,11 @@ def create_app(test_config=None):
         source_ip = observed_ipv4()
         lease_seconds = app.config["LEASE_SECONDS"]
         expires = utc_now() + timedelta(seconds=lease_seconds)
-        command = [
-            "/usr/sbin/ipset",
-            "-exist",
-            "add",
-            app.config["IPSET_NAME"],
-            source_ip,
-            "timeout",
-            str(lease_seconds),
-            "comment",
-            f"{device['branch_code']}-{device['code']}",
-        ]
         try:
-            subprocess.run(
-                command,
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=3,
+            update_ipset_member(
+                source_ip,
+                expires,
+                f"{device['branch_code']}-{device['code']}",
             )
         except (subprocess.SubprocessError, OSError):
             app.logger.exception("Unable to update ipset")

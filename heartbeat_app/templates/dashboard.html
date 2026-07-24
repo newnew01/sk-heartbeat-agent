@@ -29,6 +29,51 @@
 </section>
 
 <section class="section">
+  <h2>Emergency IP whitelist</h2>
+  <div class="grid two">
+    <article class="card">
+      <p class="muted">อนุญาต Public IPv4 ชั่วคราวสำหรับกรณีฉุกเฉิน สูงสุด 24 ชั่วโมง</p>
+      <form method="post" action="{{ url_for('create_emergency_ip_allowance') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Public IPv4
+          <input name="ip_address" inputmode="decimal" placeholder="203.0.113.10" required>
+        </label>
+        <label>ระยะเวลา (นาที)
+          <input name="duration_minutes" type="number" min="1" max="1440" value="60" required>
+        </label>
+        <label>หมายเหตุ
+          <input name="note" maxlength="200" placeholder="เหตุผลหรือผู้ร้องขอ">
+        </label>
+        <button class="danger" type="submit">อนุญาต IP ชั่วคราว</button>
+      </form>
+    </article>
+
+    <article class="card table-wrap">
+      <table class="compact-table">
+        <thead><tr><th>IP</th><th>หมดอายุ (GMT+7)</th><th>หมายเหตุ</th><th></th></tr></thead>
+        <tbody>
+        {% for allowance in emergency_allowances %}
+          <tr>
+            <td><code>{{ allowance.ip_address }}</code></td>
+            <td>{{ allowance.expires_at|bangkok_time }}</td>
+            <td>{{ allowance.note or '—' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('revoke_emergency_ip_allowance', allowance_id=allowance.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="secondary" type="submit">ยกเลิก</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="muted">ไม่มี IP ที่ได้รับอนุญาตฉุกเฉิน</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </article>
+  </div>
+</section>
+
+<section class="section">
   <h2>สาขาและอุปกรณ์</h2>
   {% if not branches %}
     <div class="empty">ยังไม่มีสาขา เริ่มต้นจากแบบฟอร์มด้านบน</div>
@@ -64,7 +109,12 @@
           {% for device in devices if device.branch_id == branch.id %}
             <tr>
               <td>
-                <strong>{{ device.code }}</strong><br>
+                <form class="device-name-form" method="post" action="{{ url_for('rename_device', device_id=device.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input name="code" value="{{ device.code }}" pattern="[A-Za-z0-9._-]+" maxlength="64"
+                         aria-label="ชื่ออุปกรณ์" required>
+                  <button class="secondary" type="submit">บันทึกชื่อ</button>
+                </form>
                 <small class="muted">{{ device.device_uid }}</small>
               </td>
               <td>
