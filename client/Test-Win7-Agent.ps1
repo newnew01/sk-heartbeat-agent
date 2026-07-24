@@ -94,13 +94,79 @@ if (
 }
 Write-Host 'PASS Windows 7 WinHTTP version parsing'
 
+$commonSource = [IO.File]::ReadAllText(
+    (Join-Path $legacyDirectory 'LegacyCommon.ps1')
+)
+if (
+    $tlsHelperSource -match '&\s+reg\.exe\s+export' -or
+    $tlsHelperSource -match '&\s+reg\.exe\s+add' -or
+    $tlsHelperSource -notmatch 'Export-LegacyRegistryKeyIfPresent' -or
+    $tlsHelperSource -notmatch 'Set-LegacyRegistryDword' -or
+    $commonSource -notmatch 'Test-Path\s+-LiteralPath'
+) {
+    throw 'TLS helper must safely handle registry keys that do not exist.'
+}
+Write-Host 'PASS guarded TLS registry operations'
+
 $testDirectory = Join-Path $env:TEMP (
     'branch-heartbeat-win7-test-' + [Guid]::NewGuid().ToString('N')
 )
 $previousDirectory = $env:BRANCH_HEARTBEAT_LEGACY_DATA_DIR
 try {
     $env:BRANCH_HEARTBEAT_LEGACY_DATA_DIR = $testDirectory
+    [IO.Directory]::CreateDirectory($testDirectory) | Out-Null
     . (Join-Path $legacyDirectory 'LegacyCommon.ps1')
+
+    $registryTestName = (
+        'HKCU\Software\BranchHeartbeatAgentTests\' +
+        [Guid]::NewGuid().ToString('N')
+    )
+    $registryProviderPath = (
+        ConvertTo-LegacyRegistryProviderPath $registryTestName
+    )
+    $registryBackupPath = Join-Path $testDirectory 'registry-test.reg'
+    try {
+        if (
+            Export-LegacyRegistryKeyIfPresent `
+                $registryTestName `
+                $registryBackupPath
+        ) {
+            throw 'A nonexistent registry key was reported as present.'
+        }
+        Set-LegacyRegistryDword $registryTestName 'TestValue' 2048
+        $registryValue = Get-LegacyRegistryDword `
+            $registryTestName `
+            'TestValue'
+        if ([Int32]$registryValue -ne 2048) {
+            throw 'Registry DWORD write failed.'
+        }
+        if (
+            -not (
+                Export-LegacyRegistryKeyIfPresent `
+                    $registryTestName `
+                    $registryBackupPath
+            )
+        ) {
+            throw 'An existing registry key was reported as absent.'
+        }
+        if (-not [IO.File]::Exists($registryBackupPath)) {
+            throw 'Registry backup file was not created.'
+        }
+        Write-Host 'PASS missing/existing registry key integration test'
+    }
+    finally {
+        if (Test-Path -LiteralPath $registryProviderPath) {
+            Remove-Item -LiteralPath $registryProviderPath -Recurse -Force
+        }
+    }
+
+    $missingTaskName = (
+        'BranchHeartbeatLegacy-Test-' + [Guid]::NewGuid().ToString('N')
+    )
+    if (Test-LegacyScheduledTask $missingTaskName) {
+        throw 'A nonexistent Scheduled Task was reported as present.'
+    }
+    Write-Host 'PASS missing Scheduled Task integration test'
 
     $testKey = 'legacy-secret-that-must-not-appear-on-disk'
     Set-LegacyConfiguration `

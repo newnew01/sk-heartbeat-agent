@@ -41,7 +41,9 @@ if (-not [IO.Directory]::Exists($dataDirectory)) {
     [IO.Directory]::CreateDirectory($dataDirectory) | Out-Null
 }
 $backupDirectory = Join-Path $dataDirectory (
-    'tls-registry-backup-' + [DateTime]::Now.ToString('yyyyMMdd-HHmmss')
+    'tls-registry-backup-' +
+    [DateTime]::Now.ToString('yyyyMMdd-HHmmss') + '-' +
+    [Guid]::NewGuid().ToString('N')
 )
 [IO.Directory]::CreateDirectory($backupDirectory) | Out-Null
 
@@ -60,8 +62,9 @@ $registryExports = @(
     )
 )
 foreach ($registryExport in $registryExports) {
-    & reg.exe export $registryExport[0] `
-        (Join-Path $backupDirectory $registryExport[1]) /y 2>$null | Out-Null
+    Export-LegacyRegistryKeyIfPresent `
+        $registryExport[0] `
+        (Join-Path $backupDirectory $registryExport[1]) | Out-Null
 }
 
 $winHttpKeys = @(
@@ -78,10 +81,12 @@ if ($is64Bit) {
     )
 }
 foreach ($winHttpKey in $winHttpKeys) {
-    & reg.exe add $winHttpKey /v DefaultSecureProtocols /t REG_DWORD `
-        /d 2048 /f | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw ('Unable to update ' + $winHttpKey)
+    Set-LegacyRegistryDword $winHttpKey 'DefaultSecureProtocols' 2048
+    if (
+        (Get-LegacyRegistryDword $winHttpKey 'DefaultSecureProtocols') -ne
+        2048
+    ) {
+        throw ('TLS 1.2 verification failed for ' + $winHttpKey)
     }
 }
 
@@ -89,14 +94,13 @@ $schannelKey = (
     'HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\' +
     'Protocols\TLS 1.2\Client'
 )
-& reg.exe add $schannelKey /v DisabledByDefault /t REG_DWORD /d 0 /f |
-    Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw 'Unable to enable the TLS 1.2 Schannel client.'
-}
-& reg.exe add $schannelKey /v Enabled /t REG_DWORD /d 1 /f | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw 'Unable to enable the TLS 1.2 Schannel client.'
+Set-LegacyRegistryDword $schannelKey 'DisabledByDefault' 0
+Set-LegacyRegistryDword $schannelKey 'Enabled' 1
+if (
+    (Get-LegacyRegistryDword $schannelKey 'DisabledByDefault') -ne 0 -or
+    (Get-LegacyRegistryDword $schannelKey 'Enabled') -ne 1
+) {
+    throw 'TLS 1.2 Schannel registry verification failed.'
 }
 
 Write-Host ''

@@ -139,8 +139,8 @@ ipset list branch_sql_allow_v4
 - Source: `client/legacy-win7`
 - Tests: `client/Test-Win7-Agent.ps1`
 - Build: `client/Build-Win7-Release.ps1`
-- Latest release tag: `win7-v1.0.5`
-- Release SHA-256: `D8809030823440B4D0AE0317E68D36A76992124043CE5BB2070F0AE21FFA12ED`
+- Latest release tag: `win7-v1.0.6`
+- Release SHA-256: `979F57B903F1D6928BD5D26B521673B1147BA902397EFE56F17C2CEA06E60880`
 - `win7-v1.0.1` เพิ่ม optional `-DeviceKey` สำหรับติดตั้งบรรทัดเดียว
   แต่ plaintext Key จะอยู่ใน command history/process command line
 - `win7-v1.0.2` แก้ PowerShell 2/.NET รุ่นเก่าที่ `SHA256Managed.Dispose()`
@@ -153,6 +153,8 @@ ipset list branch_sql_allow_v4
   และเปิด TLS 1.2 โดยยังตรวจ certificate ตามปกติ
 - `win7-v1.0.5` แก้การอ่านเวอร์ชัน `winhttp.dll` บน Windows 7 ซึ่งค่า `FileVersion`
   อาจมีข้อความ build ต่อท้าย โดยอ่านส่วนตัวเลขจาก `FileVersionInfo` โดยตรง
+- `win7-v1.0.6` รองรับ registry key และ Scheduled Task ที่ยังไม่มีบน PowerShell 2,
+  ตรวจ read-back ค่า TLS หลังเขียน และสร้าง registry backup path ที่ไม่ซ้ำกัน
 - รองรับ Windows 7 SP1 และ Windows Server 2008 R2 SP1
 - ใช้ PowerShell 2-compatible script และ Scheduled Task `BranchHeartbeatLegacy`
 - Scheduled Task รันทุก 1 นาทีด้วยบัญชี `SYSTEM`

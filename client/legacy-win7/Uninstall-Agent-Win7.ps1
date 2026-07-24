@@ -12,10 +12,19 @@ if (-not (Test-LegacyAdministrator)) {
     throw 'Run this script from PowerShell as Administrator.'
 }
 
-& schtasks.exe /Query /TN 'BranchHeartbeatLegacy' 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) {
-    & schtasks.exe /End /TN 'BranchHeartbeatLegacy' 2>$null | Out-Null
+if (Test-LegacyScheduledTask 'BranchHeartbeatLegacy') {
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & schtasks.exe /End /TN 'BranchHeartbeatLegacy' 2>&1 | Out-Null
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
     & schtasks.exe /Delete /TN 'BranchHeartbeatLegacy' /F | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to delete the BranchHeartbeatLegacy scheduled task.'
+    }
 }
 
 $taskRunnerPath = Join-Path (Get-LegacyDataDirectory) 'RunHeartbeat.cmd'

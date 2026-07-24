@@ -23,6 +23,110 @@ function Test-LegacyAdministrator {
     )
 }
 
+function ConvertTo-LegacyRegistryProviderPath {
+    param([Parameter(Mandatory = $true)][String]$RegistryPath)
+
+    if ($RegistryPath -match '^HKLM\\') {
+        return (
+            'Registry::HKEY_LOCAL_MACHINE\' +
+            $RegistryPath.Substring(5)
+        )
+    }
+    if ($RegistryPath -match '^HKCU\\') {
+        return (
+            'Registry::HKEY_CURRENT_USER\' +
+            $RegistryPath.Substring(5)
+        )
+    }
+    throw ('Unsupported registry path: ' + $RegistryPath)
+}
+
+function Export-LegacyRegistryKeyIfPresent {
+    param(
+        [Parameter(Mandatory = $true)][String]$RegistryPath,
+        [Parameter(Mandatory = $true)][String]$DestinationPath
+    )
+
+    $providerPath = ConvertTo-LegacyRegistryProviderPath $RegistryPath
+    if (-not (Test-Path -LiteralPath $providerPath)) {
+        return $false
+    }
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $exitCode = -1
+    try {
+        $ErrorActionPreference = 'Continue'
+        & reg.exe export $RegistryPath $DestinationPath /y 2>&1 | Out-Null
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($exitCode -ne 0) {
+        throw ('Unable to back up registry key ' + $RegistryPath)
+    }
+    return $true
+}
+
+function Set-LegacyRegistryDword {
+    param(
+        [Parameter(Mandatory = $true)][String]$RegistryPath,
+        [Parameter(Mandatory = $true)][String]$Name,
+        [Parameter(Mandatory = $true)][Int32]$Value
+    )
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $exitCode = -1
+    try {
+        $ErrorActionPreference = 'Continue'
+        & reg.exe add $RegistryPath /v $Name /t REG_DWORD /d $Value /f `
+            2>&1 | Out-Null
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($exitCode -ne 0) {
+        throw (
+            'Unable to set registry value ' + $RegistryPath + '\' + $Name
+        )
+    }
+}
+
+function Get-LegacyRegistryDword {
+    param(
+        [Parameter(Mandatory = $true)][String]$RegistryPath,
+        [Parameter(Mandatory = $true)][String]$Name
+    )
+
+    $providerPath = ConvertTo-LegacyRegistryProviderPath $RegistryPath
+    if (-not (Test-Path -LiteralPath $providerPath)) {
+        throw ('Registry key was not created: ' + $RegistryPath)
+    }
+    $registryItem = Get-ItemProperty -LiteralPath $providerPath
+    $property = $registryItem.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        throw ('Registry value was not created: ' + $RegistryPath + '\' + $Name)
+    }
+    return [Int32]$property.Value
+}
+
+function Test-LegacyScheduledTask {
+    param([Parameter(Mandatory = $true)][String]$TaskName)
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $exitCode = -1
+    try {
+        $ErrorActionPreference = 'Continue'
+        & schtasks.exe /Query /TN $TaskName 2>&1 | Out-Null
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    return ($exitCode -eq 0)
+}
+
 function Test-LegacyHttpsEndpoint {
     param([Parameter(Mandatory = $true)][String]$ApiUrl)
 

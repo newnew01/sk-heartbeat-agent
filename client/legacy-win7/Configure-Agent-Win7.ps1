@@ -41,6 +41,9 @@ try {
 
     $dataDirectory = Get-LegacyDataDirectory
     & icacls.exe $dataDirectory /inheritance:r | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to remove inherited permissions from the configuration directory.'
+    }
     & icacls.exe $dataDirectory /grant:r `
         '*S-1-5-18:(OI)(CI)F' `
         '*S-1-5-32-544:(OI)(CI)F' | Out-Null
@@ -60,8 +63,7 @@ finally {
 }
 
 if (-not $NoRestart) {
-    & schtasks.exe /Query /TN 'BranchHeartbeatLegacy' 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) {
+    if (Test-LegacyScheduledTask 'BranchHeartbeatLegacy') {
         & schtasks.exe /Run /TN 'BranchHeartbeatLegacy' | Out-Null
     }
 }
