@@ -67,6 +67,8 @@ journalctl -u branch-heartbeat.service --since "10 minutes ago" --no-pager
 - หน้า Admin แสดงสถานะต่ออุปกรณ์แล้ว: จุดเขียว `ออนไลน์` เมื่อ branch/device เปิดใช้งานและ lease ยังไม่หมดอายุ; จุดเทา `ออฟไลน์` เมื่อหมดอายุ, ถูกปิด หรือยังไม่เคย heartbeat
 - ฟีเจอร์สถานะ deploy ขึ้น production แล้วจาก commit `0fc27de`
 - Backup ก่อน deploy: `/opt/branch-heartbeat-backups/0fc27de-predeploy-20260724-162637.tar.gz`
+- หน้า Admin แปลงเวลา UTC เป็นเวลาไทย GMT+7 รูปแบบ `DD/MM/YYYY HH:MM:SS` แล้วจาก commit `9f6823f`
+- Backup ก่อน deploy timezone: `/opt/branch-heartbeat-backups/9f6823f-predeploy-20260724-163043.tar.gz`
 - Windows Agent เครื่องทดสอบติดตั้งเป็น service และขึ้น `healthy`
 - Service name: `BranchHeartbeatAgent`
 - Branch code: `006`
