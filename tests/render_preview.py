@@ -1,4 +1,5 @@
 import os
+import shutil
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -53,6 +54,24 @@ conn.execute(
         now.isoformat(),
     ),
 )
+conn.execute(
+    """
+    INSERT INTO devices(
+        branch_id, code, device_uid, token_hash, enabled,
+        observed_ip, last_seen, expires_at, created_at
+    ) VALUES(?,?,?,?,1,?,?,?,?)
+    """,
+    (
+        branch_id,
+        "backoffice-01",
+        "OfflineExampleDevice",
+        "unused",
+        "203.0.113.25",
+        (now - timedelta(minutes=15)).isoformat(timespec="seconds"),
+        (now - timedelta(minutes=5)).isoformat(timespec="seconds"),
+        now.isoformat(),
+    ),
+)
 conn.commit()
 conn.close()
 
@@ -62,7 +81,8 @@ with client.session_transaction() as user_session:
     user_session["csrf_token"] = "preview-csrf"
 
 html = client.get("/admin").get_data(as_text=True)
-css_uri = (Path(__file__).parents[1] / "heartbeat_app" / "static" / "app.css").as_uri()
-html = html.replace("/static/app.css", css_uri)
+css_source = Path(__file__).parents[1] / "heartbeat_app" / "static" / "app.css"
+shutil.copyfile(css_source, preview_dir / "app.css")
+html = html.replace("/static/app.css", "app.css")
 (preview_dir / "dashboard.html").write_text(html, encoding="utf-8")
 print((preview_dir / "dashboard.html").as_uri())

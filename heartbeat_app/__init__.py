@@ -235,7 +235,8 @@ def create_app(test_config=None):
             """
             SELECT b.*,
                    COUNT(d.id) AS device_count,
-                   SUM(CASE WHEN d.enabled = 1
+                   SUM(CASE WHEN b.enabled = 1
+                             AND d.enabled = 1
                              AND d.expires_at > ? THEN 1 ELSE 0 END) AS online_count
             FROM branches b
             LEFT JOIN devices d ON d.branch_id = b.id
@@ -246,11 +247,16 @@ def create_app(test_config=None):
         ).fetchall()
         devices = database().execute(
             """
-            SELECT d.*, b.code AS branch_code, b.name AS branch_name
+            SELECT d.*, b.code AS branch_code, b.name AS branch_name,
+                   CASE WHEN b.enabled = 1
+                              AND d.enabled = 1
+                              AND d.expires_at > ?
+                        THEN 1 ELSE 0 END AS is_online
             FROM devices d
             JOIN branches b ON b.id = d.branch_id
             ORDER BY b.code, d.code
-            """
+            """,
+            (iso_utc(utc_now()),),
         ).fetchall()
         logs = database().execute(
             "SELECT * FROM audit_logs ORDER BY id DESC LIMIT 25"

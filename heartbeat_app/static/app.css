@@ -85,6 +85,11 @@ button, .button {
 .badge { border-radius: 99px; font-size: 12px; padding: 5px 9px; }
 .badge.online { background: var(--accent-dark); color: var(--accent); }
 .badge.offline { background: var(--danger-dark); color: var(--danger); }
+.device-status { align-items: center; display: inline-flex; font-size: 13px; font-weight: 700; gap: 8px; white-space: nowrap; }
+.status-dot { background: var(--muted); border-radius: 50%; box-shadow: 0 0 0 3px rgba(148, 163, 189, .12); height: 9px; width: 9px; }
+.device-status.online { color: var(--accent); }
+.device-status.online .status-dot { background: var(--accent); box-shadow: 0 0 0 3px rgba(115, 224, 169, .14), 0 0 12px rgba(115, 224, 169, .45); }
+.device-status.offline { color: var(--muted); }
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; min-width: 720px; width: 100%; }
 th, td { border-bottom: 1px solid var(--line); padding: 14px 10px; text-align: left; vertical-align: top; }

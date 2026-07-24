@@ -82,6 +82,53 @@ class HeartbeatAppTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Device Key", response.get_data(as_text=True))
 
+    def test_dashboard_shows_online_and_offline_device_status(self):
+        import sqlite3
+        from datetime import datetime, timedelta, timezone
+
+        now = datetime.now(timezone.utc)
+        conn = sqlite3.connect(self.database)
+        conn.execute(
+            "INSERT INTO branches(code,name,enabled,created_at) VALUES(?,?,1,?)",
+            ("branch-001", "Test", now.isoformat()),
+        )
+        branch_id = conn.execute("SELECT id FROM branches").fetchone()[0]
+        for code, device_uid, expires_at in (
+            ("online-device", "online-device-uid", now + timedelta(minutes=5)),
+            ("offline-device", "offline-device-uid", now - timedelta(minutes=5)),
+        ):
+            conn.execute(
+                """
+                INSERT INTO devices(
+                    branch_id,code,device_uid,token_hash,enabled,
+                    observed_ip,last_seen,expires_at,created_at
+                ) VALUES(?,?,?,?,1,?,?,?,?)
+                """,
+                (
+                    branch_id,
+                    code,
+                    device_uid,
+                    "unused",
+                    "203.0.113.7",
+                    now.isoformat(),
+                    expires_at.isoformat(),
+                    now.isoformat(),
+                ),
+            )
+        conn.commit()
+        conn.close()
+        with self.client.session_transaction() as user_session:
+            user_session["admin_id"] = 1
+            user_session["admin_username"] = "admin"
+
+        response = self.client.get("/admin")
+        page = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-status="online"', page)
+        self.assertIn('data-status="offline"', page)
+        self.assertIn("ออนไลน์", page)
+        self.assertIn("ออฟไลน์", page)
+
     @patch("heartbeat_app.subprocess.run")
     def test_revoking_device_removes_unshared_ip(self, run):
         import sqlite3

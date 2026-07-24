@@ -58,13 +58,22 @@
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>อุปกรณ์</th><th>Public IP</th><th>Heartbeat ล่าสุด</th><th>หมดอายุ</th><th>จัดการ</th></tr></thead>
+          <thead><tr><th>อุปกรณ์</th><th>สถานะ</th><th>Public IP</th><th>Heartbeat ล่าสุด</th><th>หมดอายุ</th><th>จัดการ</th></tr></thead>
           <tbody>
           {% for device in devices if device.branch_id == branch.id %}
             <tr>
               <td>
                 <strong>{{ device.code }}</strong><br>
                 <small class="muted">{{ device.device_uid }}</small>
+              </td>
+              <td>
+                <span class="device-status {{ 'online' if device.is_online else 'offline' }}"
+                      data-status="{{ 'online' if device.is_online else 'offline' }}"
+                      role="status"
+                      aria-label="{{ 'ออนไลน์' if device.is_online else 'ออฟไลน์' }}">
+                  <span class="status-dot" aria-hidden="true"></span>
+                  {{ 'ออนไลน์' if device.is_online else 'ออฟไลน์' }}
+                </span>
               </td>
               <td><code>{{ device.observed_ip or '—' }}</code></td>
               <td>{{ device.last_seen or 'ยังไม่เคย' }}</td>
@@ -83,7 +92,7 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="5" class="muted">ยังไม่มีอุปกรณ์</td></tr>
+            <tr><td colspan="6" class="muted">ยังไม่มีอุปกรณ์</td></tr>
           {% endfor %}
           </tbody>
         </table>
