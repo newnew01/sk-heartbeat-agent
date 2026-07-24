@@ -82,6 +82,18 @@ if ($installSource -notmatch 'Test-LegacyHttpsEndpoint') {
 }
 Write-Host 'PASS WinHTTP transport and TLS preflight'
 
+$tlsHelperSource = [IO.File]::ReadAllText(
+    (Join-Path $legacyDirectory 'Enable-Tls12-Win7.ps1')
+)
+if (
+    $tlsHelperSource -match '\.FileVersion\s*\)' -or
+    $tlsHelperSource -notmatch 'FileMajorPart' -or
+    $tlsHelperSource -notmatch 'FilePrivatePart'
+) {
+    throw 'TLS helper must parse numeric file version parts on Windows 7.'
+}
+Write-Host 'PASS Windows 7 WinHTTP version parsing'
+
 $testDirectory = Join-Path $env:TEMP (
     'branch-heartbeat-win7-test-' + [Guid]::NewGuid().ToString('N')
 )

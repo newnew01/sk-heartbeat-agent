@@ -17,9 +17,16 @@ if (
 }
 
 $winHttpPath = Join-Path $env:SystemRoot 'System32\winhttp.dll'
-$winHttpVersion = [Version](
-    [Diagnostics.FileVersionInfo]::GetVersionInfo($winHttpPath).FileVersion
+$winHttpFileInfo = (
+    [Diagnostics.FileVersionInfo]::GetVersionInfo($winHttpPath)
 )
+$winHttpVersionText = (
+    $winHttpFileInfo.FileMajorPart.ToString() + '.' +
+    $winHttpFileInfo.FileMinorPart.ToString() + '.' +
+    $winHttpFileInfo.FileBuildPart.ToString() + '.' +
+    $winHttpFileInfo.FilePrivatePart.ToString()
+)
+$winHttpVersion = [Version]$winHttpVersionText
 $minimumVersion = [Version]'6.1.7601.23375'
 if ($winHttpVersion -lt $minimumVersion) {
     throw (
