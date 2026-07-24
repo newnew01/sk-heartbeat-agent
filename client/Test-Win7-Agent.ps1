@@ -32,6 +32,7 @@ foreach ($fileName in $runtimeScripts) {
         'Invoke-RestMethod',
         'Invoke-WebRequest',
         '::new\(',
+        '\.Dispose\(',
         'ForEach-Object\s+-Parallel',
         '\?\?'
     )

@@ -31,7 +31,9 @@ function Get-LegacyEntropy {
         )
     }
     finally {
-        $sha256.Dispose()
+        # SHA256Managed on the .NET version bundled with Windows 7 exposes
+        # Clear(), but PowerShell 2 cannot call Dispose() on that type.
+        $sha256.Clear()
     }
 }
 

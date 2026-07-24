@@ -55,7 +55,7 @@ finally {
     $plainKey = $null
     $DeviceKey = $null
     if ($null -ne $secureKey) {
-        $secureKey.Dispose()
+        $secureKey.Clear()
     }
 }
 
