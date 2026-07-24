@@ -139,8 +139,8 @@ ipset list branch_sql_allow_v4
 - Source: `client/legacy-win7`
 - Tests: `client/Test-Win7-Agent.ps1`
 - Build: `client/Build-Win7-Release.ps1`
-- Latest release tag: `win7-v1.0.3`
-- Release SHA-256: `6FB859B428E37420BA3B340D3D5B55181DB92749F24BD7A50379CE74EF12D1E8`
+- Latest release tag: `win7-v1.0.4`
+- Release SHA-256: `32AA8353AFE0FE985E6ED9F9CF6FE4C6270C2644A8FE72272E36C1B2BC44ABCD`
 - `win7-v1.0.1` เพิ่ม optional `-DeviceKey` สำหรับติดตั้งบรรทัดเดียว
   แต่ plaintext Key จะอยู่ใน command history/process command line
 - `win7-v1.0.2` แก้ PowerShell 2/.NET รุ่นเก่าที่ `SHA256Managed.Dispose()`
@@ -148,6 +148,9 @@ ipset list branch_sql_allow_v4
 - `win7-v1.0.3` แก้ `schtasks` บน PowerShell 2 แยก `-NoProfile` เป็น option
   โดยสร้าง `%ProgramData%\BranchHeartbeatLegacy\RunHeartbeat.cmd` และส่ง
   path ที่ไม่มี argument ให้ `/TR`
+- `win7-v1.0.4` เปลี่ยน heartbeat transport เป็น WinHTTP, เพิ่ม TLS preflight และ
+  `Enable-Tls12-Win7.ps1` สำหรับตรวจ KB3140245/อัปเดตที่ใหม่กว่า สำรอง registry
+  และเปิด TLS 1.2 โดยยังตรวจ certificate ตามปกติ
 - รองรับ Windows 7 SP1 และ Windows Server 2008 R2 SP1
 - ใช้ PowerShell 2-compatible script และ Scheduled Task `BranchHeartbeatLegacy`
 - Scheduled Task รันทุก 1 นาทีด้วยบัญชี `SYSTEM`

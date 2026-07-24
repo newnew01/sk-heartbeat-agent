@@ -23,6 +23,28 @@ function Test-LegacyAdministrator {
     )
 }
 
+function Test-LegacyHttpsEndpoint {
+    param([Parameter(Mandatory = $true)][String]$ApiUrl)
+
+    $healthUrl = $ApiUrl -replace '/api/v1/heartbeat$', '/healthz'
+    try {
+        $client = New-Object -ComObject WinHttp.WinHttpRequest.5.1
+        $client.SetTimeouts(5000, 5000, 5000, 15000)
+        $client.Open('GET', $healthUrl, $false)
+        $client.Send()
+        if ([Int32]$client.Status -ne 200) {
+            throw ('Health endpoint returned HTTP ' + [Int32]$client.Status + '.')
+        }
+    }
+    catch {
+        throw (
+            'TLS 1.2 preflight failed. Install Windows 7 update KB3140245, ' +
+            'run Enable-Tls12-Win7.ps1 as Administrator, restart Windows, ' +
+            'then retry. Error: ' + $_.Exception.Message
+        )
+    }
+}
+
 function Get-LegacyEntropy {
     $sha256 = [Security.Cryptography.SHA256]::Create()
     try {

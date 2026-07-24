@@ -27,6 +27,8 @@ if (
     throw 'This package requires Windows 7 SP1 or Windows Server 2008 R2 SP1.'
 }
 
+Test-LegacyHttpsEndpoint $ApiUrl
+
 $requiredFiles = @(
     'LegacyCommon.ps1',
     'Send-Heartbeat-Win7.ps1',

@@ -25,6 +25,7 @@ $packageFiles = @(
     'Send-Heartbeat-Win7.ps1',
     'Configure-Agent-Win7.ps1',
     'Get-AgentStatus-Win7.ps1',
+    'Enable-Tls12-Win7.ps1',
     'Install-Agent-Win7.ps1',
     'Uninstall-Agent-Win7.ps1',
     'README.md'

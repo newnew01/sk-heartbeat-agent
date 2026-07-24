@@ -6,6 +6,7 @@ $runtimeScripts = @(
     'Send-Heartbeat-Win7.ps1',
     'Configure-Agent-Win7.ps1',
     'Get-AgentStatus-Win7.ps1',
+    'Enable-Tls12-Win7.ps1',
     'Install-Agent-Win7.ps1',
     'Uninstall-Agent-Win7.ps1'
 )
@@ -66,6 +67,20 @@ if (
     throw 'Scheduled Task must use the argument-free compatibility runner.'
 }
 Write-Host 'PASS Windows 7 schtasks compatibility runner'
+
+$workerSource = [IO.File]::ReadAllText(
+    (Join-Path $legacyDirectory 'Send-Heartbeat-Win7.ps1')
+)
+if (
+    $workerSource -notmatch 'WinHttp\.WinHttpRequest\.5\.1' -or
+    $workerSource -match 'ServicePointManager|HttpWebRequest'
+) {
+    throw 'Heartbeat worker must use WinHTTP without the legacy .NET TLS stack.'
+}
+if ($installSource -notmatch 'Test-LegacyHttpsEndpoint') {
+    throw 'Installer must perform the TLS 1.2 preflight.'
+}
+Write-Host 'PASS WinHTTP transport and TLS preflight'
 
 $testDirectory = Join-Path $env:TEMP (
     'branch-heartbeat-win7-test-' + [Guid]::NewGuid().ToString('N')

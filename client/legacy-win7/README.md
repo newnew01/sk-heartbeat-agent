@@ -28,6 +28,16 @@ Windows 7 หมดการสนับสนุนจาก Microsoft แล�
 
 แตก ZIP ไปที่ `C:\heartbeat` เปิด PowerShell แบบ Administrator แล้วรัน:
 
+ก่อนติดตั้ง Agent ต้องมี Windows Update `KB3140245` หรืออัปเดตที่ใหม่กว่า จากนั้นเปิด TLS 1.2 และ restart เครื่อง:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\heartbeat\Enable-Tls12-Win7.ps1
+shutdown /r /t 0
+```
+
+สคริปต์จะตรวจเวอร์ชัน WinHTTP ก่อนแก้ค่า registry, สำรองค่าเดิมไว้ใต้
+`%ProgramData%\BranchHeartbeatLegacy\tls-registry-backup-*` และไม่ปิดการตรวจ certificate
+
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\heartbeat\Install-Agent-Win7.ps1 -DeviceId "DEVICE_ID_FROM_ADMIN"
 ```
@@ -80,5 +90,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Program Files\Branch
 ## แก้ปัญหา
 
 - HTTP 401: Device ID หรือ Device Key ไม่ตรง ให้หมุน Key จาก Admin แล้ว Configure ใหม่
-- TLS/certificate error: ติดตั้ง Windows Update และ Root Certificate ของ Windows 7 ให้ครบ ห้ามแก้โดยปิด certificate validation
+- TLS/secure channel error: ติดตั้ง `KB3140245` หรืออัปเดตที่ใหม่กว่า รัน `Enable-Tls12-Win7.ps1` แบบ Administrator แล้ว restart Windows
+- Certificate error: อัปเดต Root Certificate ของ Windows 7 ให้ครบ ห้ามแก้โดยปิด certificate validation
 - ดูผลล่าสุดจาก `Get-AgentStatus-Win7.ps1`
