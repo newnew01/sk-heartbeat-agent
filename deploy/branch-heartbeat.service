@@ -1,0 +1,25 @@
+[Unit]
+Description=Branch Heartbeat API and admin console
+After=network.target branch-sql-ipset.service
+Requires=branch-sql-ipset.service
+
+[Service]
+Type=simple
+User=branch-heartbeat
+Group=branch-heartbeat
+WorkingDirectory=/opt/branch-heartbeat
+EnvironmentFile=/etc/branch-heartbeat/heartbeat.env
+ExecStart=/opt/branch-heartbeat/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8787 --access-logfile - --error-logfile - wsgi:app
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/branch-heartbeat
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

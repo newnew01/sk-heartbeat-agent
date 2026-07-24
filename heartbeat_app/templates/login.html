@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}เข้าสู่ระบบ · Branch Heartbeat{% endblock %}
+{% block content %}
+<section class="login-card">
+  <h1>เข้าสู่ระบบผู้ดูแล</h1>
+  <p class="muted">จัดการสาขา อุปกรณ์ และสิทธิ์เชื่อมต่อ MSSQL</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>ชื่อผู้ใช้<input name="username" autocomplete="username" required></label>
+    <label>รหัสผ่าน<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="primary" type="submit">เข้าสู่ระบบ</button>
+  </form>
+</section>
+{% endblock %}

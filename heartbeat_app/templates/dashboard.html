@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Branch Heartbeat{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">CONTROL PLANE</p>
+    <h1>สถานะการเชื่อมต่อสาขา</h1>
+    <p class="muted">IP จะได้รับอนุญาตเป็นเวลา 10 นาทีหลัง heartbeat ล่าสุด</p>
+  </div>
+</section>
+
+<section class="grid two">
+  <article class="card">
+    <h2>เพิ่มสาขา</h2>
+    <form method="post" action="{{ url_for('create_branch') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>รหัสสาขา<input name="code" placeholder="branch-001" pattern="[A-Za-z0-9._-]+" required></label>
+      <label>ชื่อสาขา<input name="name" placeholder="สาขาสีลม" required></label>
+      <button class="primary" type="submit">เพิ่มสาขา</button>
+    </form>
+  </article>
+
+  <article class="card metric-card">
+    <div><span>สาขา</span><strong>{{ branches|length }}</strong></div>
+    <div><span>อุปกรณ์</span><strong>{{ devices|length }}</strong></div>
+    <div><span>ออนไลน์</span><strong>{{ online_total }}</strong></div>
+  </article>
+</section>
+
+<section class="section">
+  <h2>สาขาและอุปกรณ์</h2>
+  {% if not branches %}
+    <div class="empty">ยังไม่มีสาขา เริ่มต้นจากแบบฟอร์มด้านบน</div>
+  {% endif %}
+  {% for branch in branches %}
+    <article class="card branch-card">
+      <div class="row between">
+        <div>
+          <div class="row">
+            <h3>{{ branch.name }}</h3>
+            <span class="badge {{ 'online' if branch.enabled else 'offline' }}">
+              {{ 'เปิดใช้งาน' if branch.enabled else 'ปิดใช้งาน' }}
+            </span>
+          </div>
+          <code>{{ branch.code }}</code>
+        </div>
+        <form method="post" action="{{ url_for('toggle_branch', branch_id=branch.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="secondary" type="submit">{{ 'ปิดสาขา' if branch.enabled else 'เปิดสาขา' }}</button>
+        </form>
+      </div>
+
+      <form class="inline-form" method="post" action="{{ url_for('create_device', branch_id=branch.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input name="code" placeholder="pos-01" pattern="[A-Za-z0-9._-]+" required>
+        <button class="primary" type="submit">สร้าง Device Key</button>
+      </form>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>อุปกรณ์</th><th>Public IP</th><th>Heartbeat ล่าสุด</th><th>หมดอายุ</th><th>จัดการ</th></tr></thead>
+          <tbody>
+          {% for device in devices if device.branch_id == branch.id %}
+            <tr>
+              <td>
+                <strong>{{ device.code }}</strong><br>
+                <small class="muted">{{ device.device_uid }}</small>
+              </td>
+              <td><code>{{ device.observed_ip or '—' }}</code></td>
+              <td>{{ device.last_seen or 'ยังไม่เคย' }}</td>
+              <td>{{ device.expires_at or '—' }}</td>
+              <td class="actions">
+                <form method="post" action="{{ url_for('rotate_device', device_id=device.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="secondary" type="submit">หมุน Key</button>
+                </form>
+                <form method="post" action="{{ url_for('toggle_device', device_id=device.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="{{ 'danger' if device.enabled else 'secondary' }}" type="submit">
+                    {{ 'Revoke' if device.enabled else 'เปิดใช้' }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="muted">ยังไม่มีอุปกรณ์</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  {% endfor %}
+</section>
+
+<section class="section">
+  <h2>Audit log ล่าสุด</h2>
+  <article class="card table-wrap">
+    <table>
+      <thead><tr><th>เวลา UTC</th><th>ผู้กระทำ</th><th>เหตุการณ์</th><th>รายละเอียด</th></tr></thead>
+      <tbody>
+      {% for log in logs %}
+        <tr><td>{{ log.created_at }}</td><td>{{ log.actor }}</td><td><code>{{ log.action }}</code></td><td>{{ log.details }}</td></tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">ยังไม่มีเหตุการณ์</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </article>
+</section>
+{% endblock %}
