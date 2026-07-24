@@ -18,6 +18,11 @@ if ($LASTEXITCODE -eq 0) {
     & schtasks.exe /Delete /TN 'BranchHeartbeatLegacy' /F | Out-Null
 }
 
+$taskRunnerPath = Join-Path (Get-LegacyDataDirectory) 'RunHeartbeat.cmd'
+if ([IO.File]::Exists($taskRunnerPath)) {
+    Remove-Item -LiteralPath $taskRunnerPath -Force
+}
+
 $installDirectory = Join-Path $env:ProgramFiles 'BranchHeartbeatLegacy'
 if ([IO.Directory]::Exists($installDirectory)) {
     Remove-Item -LiteralPath $installDirectory -Recurse -Force

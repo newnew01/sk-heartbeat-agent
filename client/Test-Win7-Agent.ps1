@@ -58,6 +58,15 @@ if (
 }
 Write-Host 'PASS optional inline Device Key support'
 
+if (
+    $installSource -notmatch 'RunHeartbeat\.cmd' -or
+    $installSource -notmatch '/TR \$taskRunnerPath' -or
+    $installSource -match '/TR \$taskAction'
+) {
+    throw 'Scheduled Task must use the argument-free compatibility runner.'
+}
+Write-Host 'PASS Windows 7 schtasks compatibility runner'
+
 $testDirectory = Join-Path $env:TEMP (
     'branch-heartbeat-win7-test-' + [Guid]::NewGuid().ToString('N')
 )

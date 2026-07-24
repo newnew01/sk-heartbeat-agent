@@ -63,11 +63,23 @@ else {
 $powershellPath = Join-Path $env:SystemRoot `
     'System32\WindowsPowerShell\v1.0\powershell.exe'
 $workerPath = Join-Path $installDirectory 'Send-Heartbeat-Win7.ps1'
-$taskAction = '"' + $powershellPath +
-    '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' +
-    $workerPath + '"'
+$dataDirectory = Get-LegacyDataDirectory
+$taskRunnerPath = Join-Path $dataDirectory 'RunHeartbeat.cmd'
+$taskRunnerContent = @(
+    '@echo off',
+    (
+        '"' + $powershellPath +
+        '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' +
+        $workerPath + '"'
+    )
+)
+[IO.File]::WriteAllLines(
+    $taskRunnerPath,
+    $taskRunnerContent,
+    [Text.Encoding]::ASCII
+)
 
-& schtasks.exe /Create /TN 'BranchHeartbeatLegacy' /TR $taskAction `
+& schtasks.exe /Create /TN 'BranchHeartbeatLegacy' /TR $taskRunnerPath `
     /SC MINUTE /MO 1 /RU SYSTEM /F | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to create the BranchHeartbeatLegacy scheduled task.'

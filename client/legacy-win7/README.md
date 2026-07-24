@@ -21,6 +21,8 @@ Windows 7 หมดการสนับสนุนจาก Microsoft แล�
 - จำกัด ACL ของ config ไว้ที่ SYSTEM และ Administrators
 - ไม่เปิด inbound port
 - Config และ status อยู่ใน `%ProgramData%\BranchHeartbeatLegacy`
+- Scheduled Task เรียก `%ProgramData%\BranchHeartbeatLegacy\RunHeartbeat.cmd`
+  เพื่อหลีกเลี่ยงปัญหาการ parse argument ของ `schtasks` บน PowerShell 2
 
 ## ติดตั้ง
 
