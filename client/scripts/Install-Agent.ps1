@@ -11,7 +11,9 @@ param(
     [int]$IntervalSeconds = 60,
 
     [ValidateRange(5, 300)]
-    [int]$RetrySeconds = 15
+    [int]$RetrySeconds = 15,
+
+    [string]$DeviceKey
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,10 +33,26 @@ if (-not (Test-Path -LiteralPath $sourceExecutable)) {
     throw "Missing $sourceExecutable"
 }
 
-$deviceKey = Read-Host 'Paste Device Key' -AsSecureString
-$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($deviceKey)
+$secureDeviceKey = $null
+$bstr = [IntPtr]::Zero
+$plainDeviceKey = $null
 try {
-    $plainDeviceKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    if ([string]::IsNullOrEmpty($DeviceKey)) {
+        $secureDeviceKey = Read-Host 'Paste Device Key' -AsSecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR(
+            $secureDeviceKey
+        )
+        $plainDeviceKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(
+            $bstr
+        )
+    }
+    else {
+        Write-Warning (
+            'Device Key supplied on the command line may remain in shell ' +
+            'history and may be visible to other administrators.'
+        )
+        $plainDeviceKey = $DeviceKey
+    }
 
     $existingService = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
     if ($existingService -and $existingService.Status -ne 'Stopped') {
@@ -88,5 +106,8 @@ finally {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
     }
     $plainDeviceKey = $null
-    $deviceKey.Dispose()
+    $DeviceKey = $null
+    if ($null -ne $secureDeviceKey) {
+        $secureDeviceKey.Dispose()
+    }
 }

@@ -119,7 +119,10 @@ ipset list branch_sql_allow_v4
 - Source: `client/BranchHeartbeat.Agent`
 - Tests: `client/BranchHeartbeat.Agent.Tests`
 - Installer scripts: `client/scripts`
-- GitHub Release: `https://github.com/newnew01/sk-heartbeat-agent/releases/tag/v1.0.0`
+- Latest GitHub Release: `https://github.com/newnew01/sk-heartbeat-agent/releases/tag/v1.0.1`
+- Modern Windows ZIP SHA-256: `3AD7CAC447EEAD7576D2AC39EB68AF2B4C5C9EFA1CAB98B536A9685C3E117717`
+- `v1.0.1` เพิ่ม optional `-DeviceKey` สำหรับติดตั้งบรรทัดเดียวบน Windows 10/11
+  แต่ plaintext Key จะอยู่ใน command history/process command line
 - Release ZIP ถูกเก็บเป็น GitHub Release asset ไม่ได้เก็บซ้ำใน branch
 - SHA-256:
   `1002998AD6E9913A057854E2A6BB38C2471B4AEC3FA4939C44B22023C2142882`

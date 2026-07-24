@@ -4,15 +4,15 @@ Windows Service ที่ต่ออายุ Public IPv4 ของสาขา
 
 ## ดาวน์โหลด
 
-- [GitHub Release v1.0.0](https://github.com/newnew01/sk-heartbeat-agent/releases/tag/v1.0.0)
-- [ดาวน์โหลด BranchHeartbeat-Agent-1.0.0-win-x64.zip](https://github.com/newnew01/sk-heartbeat-agent/releases/download/v1.0.0/BranchHeartbeat-Agent-1.0.0-win-x64.zip)
-- SHA-256: `1002998AD6E9913A057854E2A6BB38C2471B4AEC3FA4939C44B22023C2142882`
+- [GitHub Release v1.0.1](https://github.com/newnew01/sk-heartbeat-agent/releases/tag/v1.0.1)
+- [ดาวน์โหลด BranchHeartbeat-Agent-1.0.1-win-x64.zip](https://github.com/newnew01/sk-heartbeat-agent/releases/download/v1.0.1/BranchHeartbeat-Agent-1.0.1-win-x64.zip)
+- SHA-256: `3AD7CAC447EEAD7576D2AC39EB68AF2B4C5C9EFA1CAB98B536A9685C3E117717`
 
 แพ็กเกจเป็น self-contained สำหรับ Windows x64 จึงไม่ต้องติดตั้ง .NET เพิ่ม หาก Windows แสดงคำเตือนเพราะไฟล์ยังไม่ได้ code-sign ให้ตรวจสอบ SHA-256 ก่อนติดตั้ง
 
 ## Windows 7 SP1
 
-Agent `v1.0.0` ด้านบนใช้ .NET 8 และไม่รองรับ Windows 7 สำหรับเครื่อง Legacy
+Agent `v1.0.1` ด้านบนใช้ .NET 8 และไม่รองรับ Windows 7 สำหรับเครื่อง Legacy
 ให้ใช้แพ็กเกจ PowerShell Scheduled Task แยก:
 
 - [คู่มือ Windows 7 Legacy Agent](legacy-win7/README.md)
@@ -46,6 +46,16 @@ Set-ExecutionPolicy -Scope Process Bypass
 ```
 
 5. Paste Device Key เมื่อระบบถาม โดย Key จะไม่ปรากฏใน command line
+
+ติดตั้งแบบบรรทัดเดียวโดยใส่ Device ID และ Device Key:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\heartbeat\Install-Agent.ps1 -DeviceId "DEVICE_ID_FROM_ADMIN" -DeviceKey "DEVICE_KEY_FROM_ADMIN"
+```
+
+คำสั่งแบบ inline จะทำให้ Device Key อยู่ใน command history และอาจมองเห็นจาก
+process command line ใช้เฉพาะเครื่องที่ควบคุมได้ หากต้องการความปลอดภัยสูงกว่า
+ให้ใช้คำสั่งเดิมและวาง Key เมื่อระบบถาม
 
 ## ตรวจสถานะ
 

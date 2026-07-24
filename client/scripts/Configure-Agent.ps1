@@ -5,7 +5,9 @@ param(
     [string]$DeviceId,
 
     [ValidatePattern('^https://')]
-    [string]$ApiUrl = 'https://heartbeat.184184184.xyz/api/v1/heartbeat'
+    [string]$ApiUrl = 'https://heartbeat.184184184.xyz/api/v1/heartbeat',
+
+    [string]$DeviceKey
 )
 
 $ErrorActionPreference = 'Stop'
@@ -22,10 +24,26 @@ if (-not (Test-Path -LiteralPath $executable)) {
     throw 'Branch Heartbeat Agent is not installed.'
 }
 
-$deviceKey = Read-Host 'Paste new Device Key' -AsSecureString
-$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($deviceKey)
+$secureDeviceKey = $null
+$bstr = [IntPtr]::Zero
+$plainDeviceKey = $null
 try {
-    $plainDeviceKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    if ([string]::IsNullOrEmpty($DeviceKey)) {
+        $secureDeviceKey = Read-Host 'Paste new Device Key' -AsSecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR(
+            $secureDeviceKey
+        )
+        $plainDeviceKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(
+            $bstr
+        )
+    }
+    else {
+        Write-Warning (
+            'Device Key supplied on the command line may remain in shell ' +
+            'history and may be visible to other administrators.'
+        )
+        $plainDeviceKey = $DeviceKey
+    }
     Stop-Service -Name $serviceName -Force
     $plainDeviceKey | & $executable configure `
         --device-id $DeviceId `
@@ -45,5 +63,8 @@ finally {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
     }
     $plainDeviceKey = $null
-    $deviceKey.Dispose()
+    $DeviceKey = $null
+    if ($null -ne $secureDeviceKey) {
+        $secureDeviceKey.Dispose()
+    }
 }

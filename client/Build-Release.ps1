@@ -15,6 +15,7 @@ dotnet run --project $testProject -c Release
 if ($LASTEXITCODE -ne 0) {
     throw 'Agent tests failed.'
 }
+& (Join-Path $clientRoot 'Test-ModernInstaller.ps1')
 
 if (Test-Path -LiteralPath $publishDirectory) {
     Remove-Item -LiteralPath $publishDirectory -Recurse -Force
@@ -40,7 +41,8 @@ Copy-Item `
     -LiteralPath (Join-Path $publishDirectory 'BranchHeartbeat.Agent.exe') `
     -Destination $packageDirectory
 Copy-Item -Path (Join-Path $clientRoot 'scripts\*.ps1') -Destination $packageDirectory
-Copy-Item -LiteralPath (Join-Path $clientRoot 'README.md') -Destination $packageDirectory
+Copy-Item -LiteralPath (Join-Path $clientRoot 'PACKAGE-README.md') `
+    -Destination (Join-Path $packageDirectory 'README.md')
 
 if (Test-Path -LiteralPath $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force
