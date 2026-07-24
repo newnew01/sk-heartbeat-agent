@@ -33,3 +33,9 @@ Nginx ต้องส่ง `X-Real-IP $remote_addr` และ hostname คว�
 7. เปิด service และตั้ง Nginx reverse proxy
 
 คำสั่งติดตั้งแบบละเอียดจะดำเนินการทีละขั้นหลังอัปโหลดแพ็กเกจขึ้น VPS
+
+สำหรับการติดตั้งอัตโนมัติ สามารถสร้างไฟล์รหัสผ่านที่ permission ปลอดภัยแล้วใช้:
+
+```bash
+flask --app wsgi create-admin --username admin --password-file /path/to/password
+```

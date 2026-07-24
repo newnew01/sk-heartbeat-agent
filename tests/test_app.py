@@ -32,6 +32,22 @@ class HeartbeatAppTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["status"], "ok")
 
+    def test_create_admin_from_password_file(self):
+        password_file = os.path.join(self.tempdir.name, "admin-password")
+        with open(password_file, "w", encoding="utf-8") as handle:
+            handle.write("A-secure-test-password-2026")
+        runner = self.app.test_cli_runner()
+        result = runner.invoke(
+            args=[
+                "create-admin",
+                "--username",
+                "admin",
+                "--password-file",
+                password_file,
+            ]
+        )
+        self.assertEqual(result.exit_code, 0, result.output)
+
     def test_heartbeat_requires_token(self):
         response = self.client.post("/api/v1/heartbeat")
         self.assertEqual(response.status_code, 401)

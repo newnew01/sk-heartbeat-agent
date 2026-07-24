@@ -165,12 +165,24 @@ def create_app(test_config=None):
 
     @app.cli.command("create-admin")
     @click.option("--username", prompt=True)
-    @click.password_option(confirmation_prompt=True)
-    def create_admin_command(username, password):
+    @click.option(
+        "--password-file",
+        type=click.Path(exists=True, dir_okay=False, path_type=Path),
+        help="Read the initial password from a protected file instead of prompting.",
+    )
+    def create_admin_command(username, password_file):
         initialize_database()
         username = username.strip()
         if not username:
             raise click.ClickException("Username is required")
+        if password_file:
+            password = password_file.read_text(encoding="utf-8").strip()
+        else:
+            password = click.prompt(
+                "Password", hide_input=True, confirmation_prompt=True
+            )
+        if len(password) < 12:
+            raise click.ClickException("Password must contain at least 12 characters")
         try:
             database().execute(
                 """
