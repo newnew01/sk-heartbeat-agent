@@ -7,8 +7,7 @@ __pycache__/
 *.db-shm
 *.db-wal
 *.zip
-!releases/*.zip
-releases/*/
+releases/
 client/**/bin/
 client/**/obj/
 client/artifacts/

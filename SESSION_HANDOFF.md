@@ -114,7 +114,8 @@ ipset list branch_sql_allow_v4
 - Source: `client/BranchHeartbeat.Agent`
 - Tests: `client/BranchHeartbeat.Agent.Tests`
 - Installer scripts: `client/scripts`
-- Release ZIP: `releases/BranchHeartbeat-Agent-1.0.0-win-x64.zip`
+- GitHub Release: `https://github.com/newnew01/sk-heartbeat-agent/releases/tag/v1.0.0`
+- Release ZIP ถูกเก็บเป็น GitHub Release asset ไม่ได้เก็บซ้ำใน branch
 - SHA-256:
   `1002998AD6E9913A057854E2A6BB38C2471B4AEC3FA4939C44B22023C2142882`
 - Agent เป็น .NET 8 self-contained single-file สำหรับ Windows x64
