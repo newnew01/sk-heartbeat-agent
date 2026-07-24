@@ -28,6 +28,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 
 DEVICE_CODE_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+BANGKOK_TIMEZONE = timezone(timedelta(hours=7))
 
 
 def utc_now():
@@ -36,6 +37,18 @@ def utc_now():
 
 def iso_utc(value):
     return value.astimezone(timezone.utc).isoformat(timespec="seconds")
+
+
+def format_bangkok_time(value):
+    if not value:
+        return "—"
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(BANGKOK_TIMEZONE).strftime("%d/%m/%Y %H:%M:%S")
+    except (TypeError, ValueError):
+        return str(value)
 
 
 def create_app(test_config=None):
@@ -142,6 +155,7 @@ def create_app(test_config=None):
         return token
 
     app.jinja_env.globals["csrf_token"] = csrf_token
+    app.jinja_env.filters["bangkok_time"] = format_bangkok_time
 
     def require_csrf():
         expected = session.get("csrf_token", "")

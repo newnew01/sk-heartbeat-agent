@@ -6,6 +6,7 @@
     <p class="eyebrow">CONTROL PLANE</p>
     <h1>สถานะการเชื่อมต่อสาขา</h1>
     <p class="muted">IP จะได้รับอนุญาตเป็นเวลา 10 นาทีหลัง heartbeat ล่าสุด</p>
+    <p class="muted">เวลาทั้งหมดแสดงเป็นเวลาไทย (GMT+7)</p>
   </div>
 </section>
 
@@ -58,7 +59,7 @@
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>อุปกรณ์</th><th>สถานะ</th><th>Public IP</th><th>Heartbeat ล่าสุด</th><th>หมดอายุ</th><th>จัดการ</th></tr></thead>
+          <thead><tr><th>อุปกรณ์</th><th>สถานะ</th><th>Public IP</th><th>Heartbeat ล่าสุด (GMT+7)</th><th>หมดอายุ (GMT+7)</th><th>จัดการ</th></tr></thead>
           <tbody>
           {% for device in devices if device.branch_id == branch.id %}
             <tr>
@@ -76,8 +77,8 @@
                 </span>
               </td>
               <td><code>{{ device.observed_ip or '—' }}</code></td>
-              <td>{{ device.last_seen or 'ยังไม่เคย' }}</td>
-              <td>{{ device.expires_at or '—' }}</td>
+              <td>{{ device.last_seen|bangkok_time if device.last_seen else 'ยังไม่เคย' }}</td>
+              <td>{{ device.expires_at|bangkok_time }}</td>
               <td class="actions">
                 <form method="post" action="{{ url_for('rotate_device', device_id=device.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -105,10 +106,10 @@
   <h2>Audit log ล่าสุด</h2>
   <article class="card table-wrap">
     <table>
-      <thead><tr><th>เวลา UTC</th><th>ผู้กระทำ</th><th>เหตุการณ์</th><th>รายละเอียด</th></tr></thead>
+      <thead><tr><th>เวลา (GMT+7)</th><th>ผู้กระทำ</th><th>เหตุการณ์</th><th>รายละเอียด</th></tr></thead>
       <tbody>
       {% for log in logs %}
-        <tr><td>{{ log.created_at }}</td><td>{{ log.actor }}</td><td><code>{{ log.action }}</code></td><td>{{ log.details }}</td></tr>
+        <tr><td>{{ log.created_at|bangkok_time }}</td><td>{{ log.actor }}</td><td><code>{{ log.action }}</code></td><td>{{ log.details }}</td></tr>
       {% else %}
         <tr><td colspan="4" class="muted">ยังไม่มีเหตุการณ์</td></tr>
       {% endfor %}

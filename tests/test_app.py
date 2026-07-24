@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from heartbeat_app import create_app
+from heartbeat_app import create_app, format_bangkok_time
 
 
 class HeartbeatAppTest(unittest.TestCase):
@@ -31,6 +31,13 @@ class HeartbeatAppTest(unittest.TestCase):
         response = self.client.get("/healthz")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["status"], "ok")
+
+    def test_formats_utc_time_as_bangkok_time(self):
+        self.assertEqual(
+            format_bangkok_time("2026-07-24T18:30:00+00:00"),
+            "25/07/2026 01:30:00",
+        )
+        self.assertEqual(format_bangkok_time(None), "—")
 
     def test_create_admin_from_password_file(self):
         password_file = os.path.join(self.tempdir.name, "admin-password")
@@ -128,6 +135,8 @@ class HeartbeatAppTest(unittest.TestCase):
         self.assertIn('data-status="offline"', page)
         self.assertIn("ออนไลน์", page)
         self.assertIn("ออฟไลน์", page)
+        self.assertIn(format_bangkok_time(now.isoformat()), page)
+        self.assertNotIn(now.isoformat(), page)
 
     @patch("heartbeat_app.subprocess.run")
     def test_revoking_device_removes_unshared_ip(self, run):
