@@ -28,6 +28,7 @@ dotnet publish $project `
     -c Release `
     -r win-x64 `
     --self-contained true `
+    -p:Version=$Version `
     -p:PublishSingleFile=true `
     -p:DebugType=None `
     -p:DebugSymbols=false `
