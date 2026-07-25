@@ -43,6 +43,7 @@ try
     builder.Services.AddSingleton(new HttpClient());
     builder.Services.AddSingleton<HeartbeatApiClient>();
     builder.Services.AddHostedService<HeartbeatWorker>();
+    builder.Services.AddHostedService<HeartbeatWatchdog>();
 
     await builder.Build().RunAsync();
     return 0;

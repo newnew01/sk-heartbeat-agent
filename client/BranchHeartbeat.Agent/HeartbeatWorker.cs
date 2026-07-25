@@ -5,6 +5,8 @@ namespace BranchHeartbeat.Agent;
 
 public sealed class HeartbeatWorker : BackgroundService
 {
+    private static readonly TimeSpan BlockingOperationTimeout = TimeSpan.FromSeconds(20);
+
     private readonly ConfigurationStore _configurationStore;
     private readonly HeartbeatApiClient _apiClient;
     private readonly AgentStatusStore _statusStore;
@@ -32,8 +34,13 @@ public sealed class HeartbeatWorker : BackgroundService
             byte[]? deviceKeyBytes = null;
             try
             {
-                configuration = _configurationStore.Load();
-                var deviceKey = _configurationStore.UnprotectDeviceKey(configuration);
+                configuration = await RunWithTimeoutAsync(
+                    () => _configurationStore.Load(),
+                    BlockingOperationTimeout);
+                var loadedConfiguration = configuration;
+                var deviceKey = await RunWithTimeoutAsync(
+                    () => _configurationStore.UnprotectDeviceKey(loadedConfiguration),
+                    BlockingOperationTimeout);
                 deviceKeyBytes = Encoding.UTF8.GetBytes(deviceKey);
 
                 var result = await _apiClient.SendAsync(
@@ -103,5 +110,21 @@ public sealed class HeartbeatWorker : BackgroundService
     {
         var message = exception.Message.ReplaceLineEndings(" ");
         return message.Length <= 300 ? message : message[..300];
+    }
+
+    private static async Task<T> RunWithTimeoutAsync<T>(
+        Func<T> operation,
+        TimeSpan timeout)
+    {
+        var task = Task.Run(operation);
+        var completed = await Task.WhenAny(task, Task.Delay(timeout));
+        if (completed != task)
+        {
+            throw new TimeoutException(
+                $"Operation timed out after {timeout.TotalSeconds:0}s. " +
+                "It may still be running on an abandoned thread.");
+        }
+
+        return await task;
     }
 }
