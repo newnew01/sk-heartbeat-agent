@@ -1,6 +1,6 @@
 # Session Handoff — Branch Heartbeat
 
-อัปเดตล่าสุด: 2026-07-24 (Asia/Bangkok)
+อัปเดตล่าสุด: 2026-07-25 (Asia/Bangkok)
 
 เอกสารนี้ใช้ส่งต่องานให้ session ถัดไป โปรดตรวจสถานะจริงอีกครั้งก่อนเปลี่ยน firewall หรือ production service และห้าม commit รหัสผ่าน, Device Key หรือ private key ลง repository
 
@@ -82,6 +82,67 @@ journalctl -u branch-heartbeat.service --since "10 minutes ago" --no-pager
 - Server lease/ipset timeout: 600 วินาที
 
 ค่าข้างต้นเปลี่ยนได้ โดยเฉพาะ Public IP และ timeout ต้องตรวจจากระบบจริงเสมอ
+
+## Incident (2026-07-25): Heartbeat loop ค้างเงียบบน Windows Agent
+
+อาการ: `BranchHeartbeat.Agent.exe status` ค้าง `state: error` เวลาเดิมซ้ำ ๆ
+ไม่ขยับเลยแม้รอหลายนาที ทั้งที่ `Get-Service BranchHeartbeatAgent` ยัง
+`Running` ผู้ใช้แจ้งว่าเกิดกับหลายเครื่องพร้อมกัน
+
+ตรวจสอบฝั่ง VPS (SSH เข้า `root@157.85.103.205` ด้วยคีย์ที่แปลงจาก
+`.ppk` เป็น OpenSSH `.pem` — puttygen บนเครื่อง Windows ของผู้ใช้ เพราะ
+เครื่อง dev เป็น Linux Mint ไม่มี `puttygen`/`plink` และไม่มี sudo
+ติดตั้งเพิ่มได้) พบว่า `branch-heartbeat.service` และ nginx (aaPanel,
+path จริงคือ `/www/server/nginx`, log อยู่ที่
+`/www/wwwlogs/heartbeat.184184184.xyz.log`) ทำงานปกติตลอด ไม่มี error,
+ไม่มี restart Access log แสดงว่า agent เครื่องที่มีปัญหาส่ง heartbeat
+สำเร็จทุก 60 วินาทีตรงเวลา จนถึงนาทีหนึ่งแล้ว**หยุดส่ง request ออกจาก
+เครื่องไปเลย** (ไม่ใช่แค่ error/timeout) สรุปว่าปัญหาอยู่ฝั่ง client
+ล้วน ๆ ไม่ใช่ server
+
+Root cause (ยืนยันโดยตรวจโค้ด `HeartbeatWorker.ExecuteAsync`):
+`ConfigurationStore.Load()` และโดยเฉพาะ `UnprotectDeviceKey()`
+(`ProtectedData.Unprotect` / DPAPI) เป็น synchronous call ที่**ไม่มี
+timeout ใด ๆ** ถ้า DPAPI/LSASS ค้าง (เช่น AV/EDR hook เข้าไปตรวจ
+Crypt API) เธรดจะค้างตลอดกาลโดยไม่ throw จึงไม่มีทาง reach catch block
+เดิมที่จะ log/เขียน status ใหม่ได้เลย — อธิบาย symptom ได้ตรงเป๊ะ
+(ดู `client/scripts/Install-Agent.ps1:95-96` ที่ตั้ง
+`sc.exe failure ... actions= restart/...` และ `failureflag 1` ไว้แล้ว
+แต่ไม่เคย trigger เพราะ process ไม่เคย "ตาย" มันแค่ค้าง)
+
+แก้ไขแล้วใน commit `ff6c1e0`:
+
+- `client/BranchHeartbeat.Agent/HeartbeatWorker.cs` — ครอบ `Load()`/
+  `UnprotectDeviceKey()` ด้วย `RunWithTimeoutAsync` (timeout 20 วินาที)
+  ถ้าเกินจะ throw `TimeoutException` เข้า catch block เดิมตามปกติ
+- `client/BranchHeartbeat.Agent/HeartbeatWatchdog.cs` (ไฟล์ใหม่) —
+  `BackgroundService` ที่สองคอยเช็คทุก 30 วินาทีว่า `status.json`
+  (`UpdatedAt`) เก่าเกิน 5 นาทีไหม (grace period 2 นาทีตอน startup)
+  ถ้าค้างจริงจะ `Environment.Exit(1)` ให้ SCM auto-restart ตาม
+  recovery action ที่ตั้งไว้แล้ว ครอบคลุม hang กรณีอื่นในอนาคตด้วย
+  ไม่ใช่แค่ DPAPI
+- ลงทะเบียนใน `Program.cs`: `AddHostedService<HeartbeatWatchdog>()`
+
+ตรวจสอบแล้วบน Linux Mint (เครื่อง dev): `dotnet build` ผ่าน 0 warning/
+error (ใช้ `EnableWindowsTargeting=true` compile ข้าม platform ได้)
+รัน `dotnet run` ใน `BranchHeartbeat.Agent.Tests` ผ่าน 2/3 เทส
+(`heartbeat request`, `status round-trip`) ส่วน
+`configuration round-trip` fail เพราะ DPAPI รันบน Linux ไม่ได้ (ข้อจำกัด
+แพลตฟอร์ม ไม่เกี่ยวกับโค้ดที่แก้) **ยังไม่ได้ทดสอบ watchdog แบบ
+end-to-end บน Windows จริง** (จำลอง hang แล้วดูว่า service restart
+จริงไหม)
+
+งานที่เหลือ:
+
+1. Build release ใหม่บน Windows ด้วย
+   `client/Build-Release.ps1` (bump version, เช่น `1.0.2`)
+2. ทดสอบ watchdog บนเครื่อง Windows จริง (เช่นหยุด thread จำลอง hang
+   หรือรอดูพฤติกรรมจริงในโปรดักชัน)
+3. Deploy ไปทุกเครื่องที่เคยเจออาการ `state: error` ค้าง โดยเฉพาะ
+   เครื่อง branch `006` (`new-laptop`, device ID `hM4bH-PN8TNa7HGgiqYLonyo`)
+4. พิจารณาทำแบบเดียวกันกับ Windows 7 Legacy Agent
+   (`client/legacy-win7`) หากใช้ DPAPI แบบ synchronous เหมือนกัน —
+   ยังไม่ได้ตรวจโค้ดฝั่งนั้นในรอบนี้
 
 ## งานสำคัญที่ยังค้าง
 
