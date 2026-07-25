@@ -181,7 +181,7 @@ ipset list branch_sql_allow_v4
 - Tests: `client/BranchHeartbeat.Agent.Tests`
 - Installer scripts: `client/scripts`
 - Latest GitHub Release: `https://github.com/newnew01/sk-heartbeat-agent/releases/tag/v1.0.2`
-- Modern Windows ZIP SHA-256: `4B9F07DC28A5BAE784C5C94E6E6E466B7D8B84E57FA62A00999794938785E45B`
+- Modern Windows ZIP SHA-256: `8322322679168F43967DD2040042DF2437E29EBF121A5D5319D12A62A52B88B7`
 - `v1.0.2` เพิ่ม timeout ให้ DPAPI config load และ watchdog สำหรับ restart
   Windows Service อัตโนมัติเมื่อ heartbeat loop ค้าง
 - `v1.0.1` เพิ่ม optional `-DeviceKey` สำหรับติดตั้งบรรทัดเดียวบน Windows 10/11
