@@ -6,7 +6,7 @@ Windows Service ที่ต่ออายุ Public IPv4 ของสาขา
 
 - [GitHub Release v1.0.2](https://github.com/newnew01/sk-heartbeat-agent/releases/tag/v1.0.2)
 - [ดาวน์โหลด BranchHeartbeat-Agent-1.0.2-win-x64.zip](https://github.com/newnew01/sk-heartbeat-agent/releases/download/v1.0.2/BranchHeartbeat-Agent-1.0.2-win-x64.zip)
-- SHA-256: `B26AAFDFB0BD0166B56B933CA89C74165DEC7114B37ACE35DA327C6BF198E005`
+- SHA-256: `4B9F07DC28A5BAE784C5C94E6E6E466B7D8B84E57FA62A00999794938785E45B`
 
 แพ็กเกจเป็น self-contained สำหรับ Windows x64 จึงไม่ต้องติดตั้ง .NET เพิ่ม หาก Windows แสดงคำเตือนเพราะไฟล์ยังไม่ได้ code-sign ให้ตรวจสอบ SHA-256 ก่อนติดตั้ง
 
