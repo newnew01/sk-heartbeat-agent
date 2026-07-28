@@ -1,0 +1,19 @@
+services:
+  branch-heartbeat-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: branch-heartbeat-agent
+    restart: unless-stopped
+    environment:
+      DEVICE_ID: "${DEVICE_ID}"
+      DEVICE_KEY: "${DEVICE_KEY}"
+      API_URL: "${API_URL:-https://heartbeat.184184184.xyz/api/v1/heartbeat}"
+      INTERVAL_SECONDS: "${INTERVAL_SECONDS:-60}"
+      RETRY_SECONDS: "${RETRY_SECONDS:-15}"
+      REQUEST_TIMEOUT_SECONDS: "${REQUEST_TIMEOUT_SECONDS:-15}"
+    volumes:
+      - branch-heartbeat-data:/var/lib/branch-heartbeat-agent
+
+volumes:
+  branch-heartbeat-data:

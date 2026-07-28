@@ -1,0 +1,4 @@
+client/linux-agent/*.sh text eol=lf
+client/linux-agent/Dockerfile text eol=lf
+client/linux-agent/docker-compose.yml text eol=lf
+client/linux-agent/branch-heartbeat-agent.service text eol=lf
