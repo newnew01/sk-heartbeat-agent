@@ -1,3 +1,4 @@
+using System.Net.Http;
 using BranchHeartbeat.Agent;
 using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.Extensions.Logging.EventLog;
@@ -40,7 +41,11 @@ try
     builder.Services.AddSingleton(paths);
     builder.Services.AddSingleton(configurationStore);
     builder.Services.AddSingleton(statusStore);
-    builder.Services.AddSingleton(new HttpClient());
+    builder.Services.AddSingleton(new HttpClient(new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1)
+    }));
     builder.Services.AddSingleton<HeartbeatApiClient>();
     builder.Services.AddHostedService<HeartbeatWorker>();
     builder.Services.AddHostedService<HeartbeatWatchdog>();

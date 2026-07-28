@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -108,7 +109,18 @@ public sealed class HeartbeatWorker : BackgroundService
 
     private static string SafeError(Exception exception)
     {
-        var message = exception.Message.ReplaceLineEndings(" ");
+        var parts = new List<string>();
+        var current = exception;
+        while (current is not null)
+        {
+            var detail = current is SocketException socketException
+                ? $"{current.GetType().Name}({socketException.SocketErrorCode}): {current.Message}"
+                : $"{current.GetType().Name}: {current.Message}";
+            parts.Add(detail);
+            current = current.InnerException;
+        }
+
+        var message = string.Join(" -> ", parts).ReplaceLineEndings(" ");
         return message.Length <= 300 ? message : message[..300];
     }
 
