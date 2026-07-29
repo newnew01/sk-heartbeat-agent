@@ -34,6 +34,11 @@ try
     {
         options.ServiceName = serviceName;
     });
+    builder.Logging.AddEventLog(options =>
+    {
+        options.SourceName = serviceName;
+        options.LogName = "Application";
+    });
     LoggerProviderOptions.RegisterProviderOptions<
         EventLogSettings,
         EventLogLoggerProvider>(builder.Services);
@@ -41,6 +46,7 @@ try
     builder.Services.AddSingleton(paths);
     builder.Services.AddSingleton(configurationStore);
     builder.Services.AddSingleton(statusStore);
+    builder.Services.AddSingleton<BackgroundLogger>();
     builder.Services.AddSingleton(new HttpClient(new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(2),

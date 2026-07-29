@@ -12,17 +12,20 @@ public sealed class HeartbeatWorker : BackgroundService
     private readonly HeartbeatApiClient _apiClient;
     private readonly AgentStatusStore _statusStore;
     private readonly ILogger<HeartbeatWorker> _logger;
+    private readonly BackgroundLogger _backgroundLogger;
 
     public HeartbeatWorker(
         ConfigurationStore configurationStore,
         HeartbeatApiClient apiClient,
         AgentStatusStore statusStore,
-        ILogger<HeartbeatWorker> logger)
+        ILogger<HeartbeatWorker> logger,
+        BackgroundLogger backgroundLogger)
     {
         _configurationStore = configurationStore;
         _apiClient = apiClient;
         _statusStore = statusStore;
         _logger = logger;
+        _backgroundLogger = backgroundLogger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,18 +52,18 @@ public sealed class HeartbeatWorker : BackgroundService
                     deviceKey,
                     stoppingToken);
                 lastSuccess = DateTimeOffset.UtcNow;
-                _statusStore.Write(new AgentStatus
+                await RunWithTimeoutAsync(() => _statusStore.Write(new AgentStatus
                 {
                     State = "healthy",
                     UpdatedAt = DateTimeOffset.UtcNow,
                     LastSuccessAt = lastSuccess,
                     ObservedIp = result.ObservedIp,
                     AllowedUntil = result.AllowedUntil
-                });
-                _logger.LogInformation(
+                }), BlockingOperationTimeout);
+                _backgroundLogger.Enqueue(() => _logger.LogInformation(
                     "Heartbeat succeeded. Public IP {ObservedIp}; allowed until {AllowedUntil}.",
                     result.ObservedIp,
-                    result.AllowedUntil);
+                    result.AllowedUntil));
 
                 await Task.Delay(
                     TimeSpan.FromSeconds(configuration.IntervalSeconds),
@@ -73,17 +76,26 @@ public sealed class HeartbeatWorker : BackgroundService
             catch (Exception exception)
             {
                 var safeMessage = SafeError(exception);
-                _statusStore.Write(new AgentStatus
+                try
                 {
-                    State = "error",
-                    UpdatedAt = DateTimeOffset.UtcNow,
-                    LastSuccessAt = lastSuccess,
-                    LastError = safeMessage
-                });
-                _logger.LogError(
+                    await RunWithTimeoutAsync(() => _statusStore.Write(new AgentStatus
+                    {
+                        State = "error",
+                        UpdatedAt = DateTimeOffset.UtcNow,
+                        LastSuccessAt = lastSuccess,
+                        LastError = safeMessage
+                    }), BlockingOperationTimeout);
+                }
+                catch (TimeoutException)
+                {
+                    // Best-effort: if even the status write is stuck, fall
+                    // through to the retry delay rather than compounding
+                    // the hang here.
+                }
+                _backgroundLogger.Enqueue(() => _logger.LogError(
                     "Heartbeat failed: {ErrorType}: {ErrorMessage}",
                     exception.GetType().Name,
-                    safeMessage);
+                    safeMessage));
 
                 var retrySeconds = configuration?.RetrySeconds ?? 15;
                 try
@@ -138,5 +150,16 @@ public sealed class HeartbeatWorker : BackgroundService
         }
 
         return await task;
+    }
+
+    private static Task RunWithTimeoutAsync(Action operation, TimeSpan timeout)
+    {
+        return RunWithTimeoutAsync(
+            () =>
+            {
+                operation();
+                return true;
+            },
+            timeout);
     }
 }

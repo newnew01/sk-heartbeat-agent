@@ -8,14 +8,17 @@ public sealed class HeartbeatWatchdog : BackgroundService
 
     private readonly AgentStatusStore _statusStore;
     private readonly ILogger<HeartbeatWatchdog> _logger;
+    private readonly BackgroundLogger _backgroundLogger;
     private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
 
     public HeartbeatWatchdog(
         AgentStatusStore statusStore,
-        ILogger<HeartbeatWatchdog> logger)
+        ILogger<HeartbeatWatchdog> logger,
+        BackgroundLogger backgroundLogger)
     {
         _statusStore = statusStore;
         _logger = logger;
+        _backgroundLogger = backgroundLogger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -48,13 +51,15 @@ public sealed class HeartbeatWatchdog : BackgroundService
                 continue;
             }
 
-            _logger.LogCritical(
+            // Never block this exit on logging: a hung logging provider
+            // (e.g. Windows Event Log) must not be able to prevent recovery.
+            _backgroundLogger.Enqueue(() => _logger.LogCritical(
                 "Heartbeat status has not updated for {StalenessSeconds}s " +
                 "(threshold {ThresholdSeconds}s); the heartbeat loop appears " +
-                "hung. Forcing process exit so Windows Service recovery can " +
+                "hung. Forcing process exit so the service manager can " +
                 "restart it.",
                 (int)staleness.TotalSeconds,
-                (int)StaleThreshold.TotalSeconds);
+                (int)StaleThreshold.TotalSeconds));
 
             Environment.Exit(1);
         }
